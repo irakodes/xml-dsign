@@ -3,12 +3,18 @@ package online.erakodes.xml_dsign.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import java.io.IOException;
+import java.io.StringReader;
 import java.io.StringWriter;
 
 public class XmlConverter {
@@ -50,7 +56,21 @@ public class XmlConverter {
 
     public static Document convert(String xmlString) {
         log.debug("Converting XML String [[{}] bytes]", xmlString.getBytes().length);
-        // TODO: Implement XML to Document conversion
-        return null;
+        var factory = DocumentBuilderFactory.newInstance();
+
+        try {
+            var builder = factory.newDocumentBuilder();
+            var doc = builder.parse(new InputSource(new StringReader(xmlString)));
+
+            if (doc != null) {
+                log.info("Document: {}", doc.getDocumentElement().getTextContent());
+                log.info("Node list: {}", doc.getElementsByTagName("AppHdr").getLength());
+            }
+
+            return doc;
+        } catch (SAXException | IOException | ParserConfigurationException e) {
+            log.error("An error occurred while converting the document: {}", e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 }
