@@ -5,7 +5,7 @@ import org.springframework.boot.SpringApplication;
 public class TestXmlDsignApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.from(XmlDsignApplication::main).with(TestcontainersConfiguration.class).run(args);
+		SpringApplication.from(XMLDigitalSignatureApplication::main).with(TestcontainersConfiguration.class).run(args);
 	}
 
 }

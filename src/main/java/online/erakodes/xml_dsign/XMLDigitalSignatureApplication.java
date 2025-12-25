@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class XmlDsignApplication {
+public class XMLDigitalSignatureApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(XmlDsignApplication.class, args);
+		SpringApplication.run(XMLDigitalSignatureApplication.class, args);
 	}
 
 }
