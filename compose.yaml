@@ -1,0 +1,14 @@
+services:
+    msqql-server:
+        image: mcr-microsoft.com
+        ports:
+            -   "1433:1433"
+        environment:
+            ACCEPT_EULA: "Y"
+            SA_PASSWORD: "runMSSQLN0w"
+            MSSQL_PID: "xml_dsign_developer"
+        volumes:
+            -   sqlserver_data:/var/opt/mssql
+volumes:
+    sqlserver_data:
+        driver: local
