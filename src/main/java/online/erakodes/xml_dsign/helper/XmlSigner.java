@@ -15,10 +15,7 @@ import javax.xml.crypto.dsig.keyinfo.X509Data;
 import javax.xml.crypto.dsig.spec.TransformParameterSpec;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 import static online.erakodes.xml_dsign.util.XmlConverter.convert;
 
@@ -57,7 +54,8 @@ public class XmlSigner {
         x509Content.add(certificate);
         X509Data x509data = kif.newX509Data(x509Content);
 
-        final String keyInfoId = "a7dbf03b-0c6c-44ea-8629-20a332001aa7";
+        // final var keyInfoId = "a7dbf03b-0c6c-44ea-8629-20a332001aa7";
+        final var keyInfoId = UUID.randomUUID().toString();
 
         final KeyInfo ki = kif.newKeyInfo(Arrays.asList(keyValue, x509data), keyInfoId);
 
@@ -67,26 +65,27 @@ public class XmlSigner {
             .newReference("#" + keyInfoId, fac
                 .newDigestMethod("http://www.w3.org/2001/04/xmlenc#sha256", null),
                 Collections
-                    .singletonList(fac
-                        .newCanonicalizationMethod("http://www.w3.org/2001/10/xml-exc-c14n#",
+                .singletonList(fac
+                .newCanonicalizationMethod("http://www.w3.org/2001/10/xml-exc-c14n#",
                             (XMLStructure) null)), null, null);
         refs.add(ref1);
-        List<Transform> transformList = new ArrayList<>();
+        var transformList = new ArrayList<>();
 
-        transformList.add(fac.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null));
-        transformList.add(fac.newTransform(CanonicalizationMethod.EXCLUSIVE, (TransformParameterSpec) null));
+        transformList.add(fac
+        .newTransform(Transform.ENVELOPED,(TransformParameterSpec) null));
+        transformList.add(fac
+        .newTransform(CanonicalizationMethod.EXCLUSIVE, (TransformParameterSpec) null));
 
-        final Reference ref2 = fac
+        final var ref2 = fac
             .newReference("", fac
                 .newDigestMethod("http://www.w3.org/2001/04/xmlenc#sha256", null),
                 transformList, null, null);
         refs.add(ref2);
 
-        final Reference ref3 = fac
+        final var ref3 = fac
             .newReference(null, fac
                 .newDigestMethod("http://www.w3.org/2001/04/xmlenc#sha256", null),
-                Collections
-                    .singletonList(fac
+                Collections.singletonList(fac
                         .newCanonicalizationMethod("http://www.w3.org/2001/10/xml-exc-c14n#",
                             (XMLStructure) null)), null, null);
         refs.add(ref3);
@@ -97,7 +96,7 @@ public class XmlSigner {
                 .newSignatureMethod("http://www.w3.org/2001/04/xmldsig-more#rsa-sha256", null),
                 refs);
 
-        final XMLSignature signature = fac.newXMLSignature(si, ki, null, null, null);
+        final var signature = fac.newXMLSignature(si, ki, null, null, null);
 
         try {
             signature.sign(dsc);
