@@ -32,3 +32,7 @@ spring:
     init:
       mode: always
       schema-locations: classpath:sql/schema.sql
+  docker:
+    compose:
+      enabled: true
+      lifecycle-management: start_only
