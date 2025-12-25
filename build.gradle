@@ -8,7 +8,7 @@ plugins {
 }
 
 group = 'online.erakodes'
-version = '0.0.1-SNAPSHOT'
+version = '0.0.1'
 description = 'XML Digital Signature Custom Implementation'
 
 java {
