@@ -14,9 +14,10 @@ import javax.xml.crypto.dsig.keyinfo.KeyValue;
 import javax.xml.crypto.dsig.keyinfo.X509Data;
 import javax.xml.crypto.dsig.spec.TransformParameterSpec;
 import java.security.PublicKey;
-import java.security.cert.Certificate;
 import java.util.*;
 
+import static online.erakodes.xml_dsign.util.KeyHandler.getCertificate;
+import static online.erakodes.xml_dsign.util.KeyHandler.getPrivateKey;
 import static online.erakodes.xml_dsign.util.XmlConverter.convert;
 
 public class XmlSigner {
@@ -27,11 +28,11 @@ public class XmlSigner {
         if (doc == null) {
             throw new Exception("document to be signed is null");
         }
-        final var privateKey = fetchPrivateKey(keyPass);
-        final var certificate = fetchCertificate(keyPass);
+        final var privateKey = getPrivateKey(keyPass);
+        final var certificate = getCertificate(keyPass);
         //String output;
         final XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
-        PublicKey publicKey = ((Certificate) certificate).getPublicKey();
+        PublicKey publicKey = certificate.getPublicKey();
 
         Node appHdr = null;
         final NodeList signatureList = doc.getElementsByTagName("AppHdr");
@@ -69,7 +70,8 @@ public class XmlSigner {
                 .newCanonicalizationMethod("http://www.w3.org/2001/10/xml-exc-c14n#",
                             (XMLStructure) null)), null, null);
         refs.add(ref1);
-        var transformList = new ArrayList<>();
+        var transformList = new ArrayList<Transform>();
+
 
         transformList.add(fac
         .newTransform(Transform.ENVELOPED,(TransformParameterSpec) null));
