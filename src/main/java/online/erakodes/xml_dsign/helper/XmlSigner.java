@@ -16,6 +16,7 @@ import javax.xml.crypto.dsig.spec.TransformParameterSpec;
 import java.security.PublicKey;
 import java.util.*;
 
+import static online.erakodes.xml_dsign.helper.AppURIDereferencer.setRightContent;
 import static online.erakodes.xml_dsign.util.KeyHandler.getCertificate;
 import static online.erakodes.xml_dsign.util.KeyHandler.getPrivateKey;
 import static online.erakodes.xml_dsign.util.XmlConverter.convert;
@@ -46,7 +47,7 @@ public class XmlSigner {
 
         final DOMSignContext dsc = new DOMSignContext(privateKey, appHdr);
         dsc.putNamespacePrefix("http://www.w3.org/2000/09/xmldsig#", "ds");
-        dsc.setURIDereferencer(new NoUriDereferencer(doc));
+        dsc.setURIDereferencer(new AppURIDereferencer(doc));
 
         final KeyInfoFactory kif = fac.getKeyInfoFactory();
         KeyValue keyValue = kif.newKeyValue(publicKey);
