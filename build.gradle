@@ -37,8 +37,11 @@ dependencies {
 
 	// Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults.
 	implementation group: 'io.netty', name: 'netty-resolver-dns-native-macos', classifier: 'osx-aarch_64'
-	// Or if using Kotlin DSL (build.gradle.kts)
-	// implementation("io.netty:netty-resolver-dns-native-macos:${netty.version}:osx-aarch_64")
+
+	// Integration for ISO 20022 Message Generation and Handling
+	// https://mvnrepository.com/artifact/com.prowidesoftware/pw-iso20022
+	implementation 'com.prowidesoftware:pw-iso20022:SRU2025-10.3.3'
+	implementation 'com.sun.xml.bind:jaxb-impl:4.0.2'
 
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
