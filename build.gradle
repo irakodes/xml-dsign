@@ -38,6 +38,9 @@ dependencies {
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-scalar:2.8.14'
 
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-scalar:2.8.14'
+
 	// Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults.
 	implementation group: 'io.netty', name: 'netty-resolver-dns-native-macos', classifier: 'osx-aarch_64'
 
