@@ -3,29 +3,10 @@ package online.erakodes.xml_dsign.helper;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import com.prowidesoftware.swift.model.mx.*;
+import com.prowidesoftware.swift.model.mx.dic.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.prowidesoftware.swift.model.mx.BusinessAppHdrV01;
-import com.prowidesoftware.swift.model.mx.EnvelopeType;
-import com.prowidesoftware.swift.model.mx.MxCamt00300107;
-import com.prowidesoftware.swift.model.mx.MxWriteConfiguration;
-import com.prowidesoftware.swift.model.mx.dic.AccountCriteria3Choice;
-import com.prowidesoftware.swift.model.mx.dic.AccountCriteria7;
-import com.prowidesoftware.swift.model.mx.dic.AccountIdentification4Choice;
-import com.prowidesoftware.swift.model.mx.dic.AccountIdentificationSearchCriteria2Choice;
-import com.prowidesoftware.swift.model.mx.dic.AccountQuery3;
-import com.prowidesoftware.swift.model.mx.dic.CashAccountSearchCriteria7;
-import com.prowidesoftware.swift.model.mx.dic.Contact4;
-import com.prowidesoftware.swift.model.mx.dic.GenericAccountIdentification1;
-import com.prowidesoftware.swift.model.mx.dic.GenericPersonIdentification1;
-import com.prowidesoftware.swift.model.mx.dic.GetAccountV07;
-import com.prowidesoftware.swift.model.mx.dic.MessageHeader9;
-import com.prowidesoftware.swift.model.mx.dic.Party38Choice;
-import com.prowidesoftware.swift.model.mx.dic.PartyIdentification135;
-import com.prowidesoftware.swift.model.mx.dic.PersonIdentification13;
-import com.prowidesoftware.swift.model.mx.dic.PersonIdentificationSchemeName1Choice;
-
 
 public class ISOMessageHandler {
     private final static Logger log = LoggerFactory.getLogger(ISOMessageHandler.class);
@@ -36,9 +17,10 @@ public class ISOMessageHandler {
      * @param messageId The message identifier (can be null to auto-generate)
      * @param creDtTm The creation date/time (can be null to use current time)
      * @param accountId The account ID to search for
+     * @param mobile The mobile number for contact details (optional; must match ISO PhoneNumber pattern if provided)
      * @return The formatted XML message as a string
      */
-    public static String formatCAMT00300107(String messageId, OffsetDateTime creDtTm, String accountId) {
+    public static String formatCAMT00300107(String messageId, OffsetDateTime creDtTm, String accountId, String mobile) {
         if (accountId == null || accountId.isEmpty()) {
             throw new IllegalArgumentException("Account ID is required");
         }
@@ -56,7 +38,7 @@ public class ISOMessageHandler {
         var mx = new MxCamt00300107();
 
         // Set Application Header
-        var appHdr = new BusinessAppHdrV01();
+        var appHdr = new BusinessAppHdrV04();
         appHdr.setBizMsgIdr(finalMessageId);
         appHdr.setCreDt(finalCreDtTm);
         mx.setAppHdr(appHdr);
@@ -89,32 +71,16 @@ public class ISOMessageHandler {
         acctIdSearch.setEQ(acctIdChoice);
         schCrit.addAcctId(acctIdSearch);
 
-        // Build Account Owner (AcctOwnr):
-        // AcctOwnr -> CtctDtls -> MobNb
-        // AcctOwnr -> Id -> PrvtId -> Othr -> SchmeNm -> Prtry, Id
+        // Build Account Owner (AcctOwnr) only with contact details if mobile is provided
         var acctOwnr = new PartyIdentification135();
 
-        // Set Contact Details with Mobile Number
-        var ctctDtls = new Contact4();
-        ctctDtls.setMobNb("999999999");
-        acctOwnr.setCtctDtls(ctctDtls);
+        if (mobile != null && !mobile.isEmpty()) {
+            var ctctDtls = new Contact4();
+            ctctDtls.setMobNb(mobile);
+            acctOwnr.setCtctDtls(ctctDtls);
+        }
 
-        // Set Private ID structure
-        var id = new Party38Choice();
-        var prvtId = new PersonIdentification13();
-        var othrId = new GenericPersonIdentification1();
-
-        // Set Scheme Name with Prtry (empty)
-        var schmeNm = new PersonIdentificationSchemeName1Choice();
-        schmeNm.setPrtry("");
-        othrId.setSchmeNm(schmeNm);
-        othrId.setId("");
-
-        prvtId.addOthr(othrId);
-        id.setPrvtId(prvtId);
-        acctOwnr.setId(id);
-
-        // Set Account Owner in Search Criteria
+        // Set Account Owner in Search Criteria (omit Id since no value provided)
         schCrit.setAcctOwnr(acctOwnr);
 
         // Complete the structure: NewCrit -> SchCrit
@@ -126,7 +92,9 @@ public class ISOMessageHandler {
 
         // Configure XML output with BusinessMessage envelope
         var conf = new MxWriteConfiguration();
-        conf.envelopeType = EnvelopeType.BME_V1;  // Produces <BusinessMessage><AppHdr>...</AppHdr><Document>...</Document></BusinessMessage>
+        conf.envelopeType = EnvelopeType.SWIFT;  // Produces <BusinessMessage><AppHdr>...</AppHdr><Document>...</Document></BusinessMessage>
+        conf.documentPrefix = null;
+        conf.includeXMLDeclaration = true;
 
         return mx.message(conf);
     }
@@ -135,14 +103,16 @@ public class ISOMessageHandler {
      * Legacy method for backward compatibility.
      * Formats a CAMT.003.001.07 message using array arguments.
      *
-     * @param args Array with [accountId, mobileNumber]
+     * @param args Array with [accountId, mobileNumber] (mobileNumber optional)
      * @return The formatted XML message as a string
      */
     public static String formatCAMT00300107(String[] args) {
         if (args == null || args.length < 1) {
             throw new IllegalArgumentException("At least account ID is required");
         }
-        return formatCAMT00300107(null, null, args[0]);
+        var accountId = args[0];
+        var mobile = args.length > 1 ? args[1] : null;
+        return formatCAMT00300107(null, null, accountId, mobile);
     }
 
     private static String generateUniqueMessageId() {
