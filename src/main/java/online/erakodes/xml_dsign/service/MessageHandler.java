@@ -21,7 +21,7 @@ public class MessageHandler implements IMessageHandler<AccountLookupDto, Account
                 request.accountId(), request.accountName()
         });
 
-        log.info("CAMT.003.001.07 formatted: {}", message);
+        log.info("[CAMT.003.001.07] {}", message);
         return null;
     }
 }
