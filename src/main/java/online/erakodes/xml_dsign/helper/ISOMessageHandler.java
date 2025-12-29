@@ -15,9 +15,9 @@ public class ISOMessageHandler {
      * Formats a CAMT.003.001.07 message for account lookup.
      *
      * @param messageId The message identifier (can be null to auto-generate)
-     * @param creDtTm The creation date/time (can be null to use current time)
+     * @param creDtTm   The creation date/time (can be null to use current time)
      * @param accountId The account ID to search for
-     * @param mobile The mobile number for contact details (optional; must match ISO PhoneNumber pattern if provided)
+     * @param mobile    The mobile number for contact details (optional; must match ISO PhoneNumber pattern if provided)
      * @return The formatted XML message as a string
      */
     public static String formatCAMT00300107(String messageId, OffsetDateTime creDtTm, String accountId, String mobile) {
@@ -92,9 +92,15 @@ public class ISOMessageHandler {
 
         // Configure XML output with BusinessMessage envelope
         var conf = new MxWriteConfiguration();
-        conf.envelopeType = EnvelopeType.SWIFT;  // Produces <BusinessMessage><AppHdr>...</AppHdr><Document>...</Document></BusinessMessage>
+        conf.envelopeType = EnvelopeType.CUSTOM;
+
+        // Produces <BusinessMessage><AppHdr>...</AppHdr><Document>...</Document></BusinessMessage>
+        conf.rootElement = "BusinessMessage";
+
         conf.documentPrefix = null;
+        conf.headerPrefix = null;
         conf.includeXMLDeclaration = true;
+        conf.useCategoryAsDocumentPrefix = false;
 
         return mx.message(conf);
     }
@@ -116,7 +122,8 @@ public class ISOMessageHandler {
     }
 
     private static String generateUniqueMessageId() {
-        return UUID.randomUUID().toString()
-        .replaceAll("^[0-9]", "");
+        return System.currentTimeMillis() + UUID.randomUUID().toString()
+                .replaceAll("-", "")
+                .replaceAll("[a-zA-Z]", "").substring(0, 2);
     }
 }
