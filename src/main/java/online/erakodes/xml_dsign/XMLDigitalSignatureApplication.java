@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 public class XMLDigitalSignatureApplication {
 
 	private final static Logger log = LoggerFactory
-	.getLogger(XMLDigitalSignatureApplication.class);
+			.getLogger(XMLDigitalSignatureApplication.class);
 
 	private final IMessageHandler<AccountLookupDto, AccountLookupResponse> accountLookupHandler;
 	private final IMessageHandler<AccountOpeningDto, AccountOpeningResponse> accountOpeningHandler;
@@ -39,7 +39,7 @@ public class XMLDigitalSignatureApplication {
 	public ResponseEntity<CompletableFuture<Result<AccountLookupResponse>>> lookupAccount(@PathVariable String id) {
 		log.info("Handling account lookup with ID {}", id);
 		var response = accountLookupHandler
-		.handle(new AccountLookupDto(id, "", ""));
+				.handle(new AccountLookupDto(id, "", ""));
 
 		return ResponseEntity.ok(response);
 	}
@@ -47,6 +47,10 @@ public class XMLDigitalSignatureApplication {
 	@PostMapping("/accounts")
 	public ResponseEntity<CompletableFuture<Result<AccountOpeningResponse>>> createAccount(@RequestBody AccountOpeningDto request) {
 		log.info("Handling account creation for account ID: {}", request.accountId());
+
+		if (request.withProxy() && request.proxy() == null) throw
+				new IllegalArgumentException("An account proxy is required for this call");
+
 		var response = accountOpeningHandler.handle(request);
 
 		return ResponseEntity.ok(response);

@@ -7,6 +7,7 @@ import java.util.UUID;
 import com.prowidesoftware.swift.model.mx.*;
 import com.prowidesoftware.swift.model.mx.dic.*;
 import online.erakodes.xml_dsign.model.ContactDetails;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,7 @@ public class ISOMessageHandler {
         // Set Application Header
         var appHdr = new BusinessAppHdrV04();
         appHdr.setBizMsgIdr(finalMessageId);
-        appHdr.setCreDt(finalCreDtTm);
+        appHdr.setCreationDate(true);
         mx.setAppHdr(appHdr);
 
         // Create GetAccount message
@@ -62,6 +63,15 @@ public class ISOMessageHandler {
 
         // Build Account Query Definition structure:
         // AcctQryDef -> AcctCrit -> NewCrit -> SchCrit -> AcctId -> EQ -> Othr -> Id
+        var acctQryDef = getAccountQuery3(accountId, mobile);
+        getAcct.setAcctQryDef(acctQryDef);
+        mx.setGetAcct(getAcct);
+
+        var conf = getMxWriteConfiguration();
+        return mx.message(conf);
+    }
+
+    private static @NonNull AccountQuery3 getAccountQuery3(String accountId, String mobile) {
         var acctQryDef = new AccountQuery3();
         var acctCritChoice = new AccountCriteria3Choice();
         var newCrit = new AccountCriteria7();
@@ -95,22 +105,7 @@ public class ISOMessageHandler {
         newCrit.addSchCrit(schCrit);
         acctCritChoice.setNewCrit(newCrit);
         acctQryDef.setAcctCrit(acctCritChoice);
-        getAcct.setAcctQryDef(acctQryDef);
-        mx.setGetAcct(getAcct);
-
-        // Configure XML output with BusinessMessage envelope
-        var conf = new MxWriteConfiguration();
-        conf.envelopeType = EnvelopeType.CUSTOM;
-
-        // Produces <BusinessMessage><AppHdr>...</AppHdr><Document>...</Document></BusinessMessage>
-        conf.rootElement = "BusinessMessage";
-
-        conf.documentPrefix = null;
-        conf.headerPrefix = null;
-        conf.includeXMLDeclaration = true;
-        conf.useCategoryAsDocumentPrefix = false;
-
-        return mx.message(conf);
+        return acctQryDef;
     }
 
     private static String formatACMT00700102(String accountId, String accountName, String fullName,
@@ -194,24 +189,19 @@ public class ISOMessageHandler {
         msgHdr.setMsgId(messageId);
         msgHdr.setCreDtTm(finalCreDtTm);
 
-        /* var appHdr = new BusinessAppHdrV04()
-                .setBizMsgIdr(messageId)
-                .setCreDt(finalCreDtTm)
-                .setMsgDefIdr("acmt.007.001.02"); */
-
         //var mxMessage = new MxCamt00700102();
         var mxMessage = new MxAcmt00700102()
                 .setAcctOpngReq(acctOpeningRequest);
 
-        var conf = new MxWriteConfiguration();
-        conf.envelopeType = EnvelopeType.CUSTOM;
-        conf.rootElement = "BusinessMessage";
-        conf.documentPrefix = null;
-        conf.headerPrefix = null;
-        conf.includeXMLDeclaration = true;
-        conf.useCategoryAsDocumentPrefix = false;
+        var appHdr = new BusinessAppHdrV04();
+        appHdr.setBizMsgIdr(messageId);
+        appHdr.setCreationDate(true);
+        appHdr.setMsgDefIdr("acmt.007.001.02");
 
-        return mxMessage.message(conf);
+        mxMessage.setAppHdr(appHdr);
+        var config = getMxWriteConfiguration();
+
+        return mxMessage.message(config);
     }
 
     /**
@@ -251,5 +241,25 @@ public class ISOMessageHandler {
         return System.currentTimeMillis() + UUID.randomUUID().toString()
                 .replaceAll("-", "")
                 .replaceAll("[a-zA-Z]", "").substring(0, 2);
+    }
+
+    private static MxWriteConfiguration getMxWriteConfiguration() {
+        // Configure XML output with BusinessMessage envelope
+        var conf = new MxWriteConfiguration();
+        conf.envelopeType = EnvelopeType.CUSTOM;
+
+        // Produces
+        // <BusinessMessage>
+        //      <AppHdr>...</AppHdr>
+        //          <Document>...</Document>
+        // </BusinessMessage>
+        conf.rootElement = "BusinessMessage";
+
+        conf.documentPrefix = null;
+        conf.headerPrefix = null;
+        conf.includeXMLDeclaration = true;
+        conf.useCategoryAsDocumentPrefix = false;
+
+        return conf;
     }
 }
