@@ -136,7 +136,7 @@ public class ISOMessageHandler {
                 .setId(new AccountIdentification4Choice()
                         .setOthr(new GenericAccountIdentification1()
                                 .setId(accountId)))
-                .setNm(contactDetails.name())
+                .setNm(contactDetails != null ? contactDetails.name() : accountName)
                 .setSts(AccountStatus3Code.ENAB)
                 .setCcy(AcctOpnCcy);
 
@@ -169,10 +169,10 @@ public class ISOMessageHandler {
                                         .setCityOfBirth(OPCO))
                                 .addOthr(new GenericPersonIdentification1()
                                         .setId(messageId)))
-                        .setCtctDtls(new ContactDetails2()
+                        .setCtctDtls(contactDetails != null ? new ContactDetails2()
                                 .setNm(contactDetails.name())
                                 .setEmailAdr(contactDetails.email())
-                                .setMobNb(contactDetails.mobileNumber())));
+                                .setMobNb(contactDetails.mobileNumber()) : null));
 
         // var supplementaryData = new SupplementaryData1().setPlcAndNm("INSE|nickname")
         //         .setEnvlp(new SupplementaryDataEnvelope1().setAny(
