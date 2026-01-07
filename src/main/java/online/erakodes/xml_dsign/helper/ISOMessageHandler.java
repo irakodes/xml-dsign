@@ -1,15 +1,25 @@
 package online.erakodes.xml_dsign.helper;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import com.prowidesoftware.swift.model.mx.*;
 import com.prowidesoftware.swift.model.mx.dic.*;
+import online.erakodes.xml_dsign.model.ContactDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ISOMessageHandler {
     private final static Logger log = LoggerFactory.getLogger(ISOMessageHandler.class);
+    private final static String AttchdDocNm = "307";
+    private final static String AcctOpnCcy = "RWF";
+    private final static String OPCO = "RW";
+    private final static String OPCO_CITY = "KGL";
+    private final static String DOI /* Date Of Incorporation */ = "2013-01-01";
+    private final static String BICFI = "GTBIRWRKXXX";
+    private final static String FI_NAME = "Guaranty Trust Bank (Rwanda) Ltd";
+    private final static String FI_CODE = "070";
 
     /**
      * Formats a CAMT.003.001.07 message for account lookup.
@@ -103,6 +113,99 @@ public class ISOMessageHandler {
         conf.useCategoryAsDocumentPrefix = false;
 
         return mx.message(conf);
+    }
+
+    public static String formatACMT00700102(String messageId, String accountId, String accountName, String fullName,
+                                            OffsetDateTime registrationDate, OffsetDateTime dateOfBirth, ContactDetails contactDetails) {
+        log.debug("Handling CAMT.007.001.02 Message Generation (Account Creation)");
+        messageId = messageId != null ? messageId : generateUniqueMessageId();
+        var finalCreDtTm = OffsetDateTime.now();
+
+        //var mxMessage = new MxCamt00700102();
+        var mxMessage = new MxAcmt00700102();
+
+        var appHdr = new BusinessAppHdrV04();
+        appHdr.setBizMsgIdr(messageId);
+        appHdr.setCreDt(finalCreDtTm);
+        mxMessage.setAppHdr(appHdr);
+
+        var msgId = new MessageIdentification1()
+                .setId(messageId)
+                .setCreDtTm(finalCreDtTm);
+
+        //var prcId = new MessageIdentification1()
+        //.setId(messageId);
+
+        var refs = new References4()
+                .setMsgId(msgId)
+                //.setPrcId(prcId);
+                .setPrcId(msgId);
+        refs.addAttchdDocNm(AttchdDocNm);
+
+        var customerAccount = new CustomerAccount4()
+                .setId(new AccountIdentification4Choice()
+                        .setOthr(new GenericAccountIdentification1()
+                                .setId(accountId)))
+                .setNm(contactDetails.name())
+                .setSts(AccountStatus3Code.ENAB)
+                .setCcy(AcctOpnCcy);
+
+        var financialInstitutionId = new BranchAndFinancialInstitutionIdentification5()
+                .setFinInstnId(new FinancialInstitutionIdentification8()
+                        .setBICFI(BICFI)
+                        .setNm(FI_NAME)
+                        .setOthr(new GenericFinancialIdentification1()
+                                .setId(FI_CODE)));
+
+        var organisationId = new Organisation12()
+                .setFullLglNm(FI_NAME)
+                .setCtryOfOpr(OPCO)
+                .setRegnDt(LocalDate.of(2013, 1, 1))
+                .setLglAdr(new PostalAddress6()
+                        .setAdrTp(AddressType2Code.BIZZ))
+                .setOrgId(new OrganisationIdentification8()
+                        .setAnyBIC(BICFI)
+                        .addOthr(new GenericOrganisationIdentification1()
+                                .setId(AttchdDocNm)
+                                .setSchmeNm(new OrganisationIdentificationSchemeName1Choice()
+                                        .setCd(AttchdDocNm))
+                                .setIssr(AttchdDocNm)))
+                .addSndr(new PartyIdentification40()
+                        .setPstlAdr(new PostalAddress6().setAdrTp(AddressType2Code.HOME))
+                        .setId(new PersonIdentification5()
+                                .setDtAndPlcOfBirth(new DateAndPlaceOfBirth()
+                                        .setBirthDt(dateOfBirth.toLocalDate())
+                                        .setCityOfBirth(OPCO_CITY)
+                                        .setCityOfBirth(OPCO))
+                                .addOthr(new GenericPersonIdentification1()
+                                        .setId(messageId)))
+                        .setCtctDtls(new ContactDetails2()
+                                .setNm(contactDetails.name())
+                                .setEmailAdr(contactDetails.email())
+                                .setMobNb(contactDetails.mobileNumber())));
+
+
+        // var supplementaryData = new SupplementaryData1().setPlcAndNm("INSE|nickname")
+        //         .setEnvlp(new SupplementaryDataEnvelope1().setAny(
+        //                 new Object() {
+        //                     final Object text = new Object() {
+        //                         final String value = "";
+        //                     };
+        //                 }
+        //         ));
+
+        var acctOpeningRequest = new AccountOpeningRequestV02()
+                .setRefs(refs)
+                .setAcct(customerAccount)
+                .setAcctSvcrId(financialInstitutionId)
+                .setOrg(organisationId)
+                .addSplmtryData(null);
+
+        var msgHdr = new MessageHeader9();
+        msgHdr.setMsgId(messageId);
+        msgHdr.setCreDtTm(finalCreDtTm);
+
+        return "";
     }
 
     /**
