@@ -11,9 +11,9 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.CompletableFuture;
 
 @Component
-public class MessageHandler implements IMessageHandler<AccountLookupDto, AccountLookupResponse> {
+public class AccountLookupMessageHandler implements IMessageHandler<AccountLookupDto, AccountLookupResponse> {
 
-    private final static Logger log = LoggerFactory.getLogger(MessageHandler.class);
+    private final static Logger log = LoggerFactory.getLogger(AccountLookupMessageHandler.class);
 
     @Override
     public CompletableFuture<Result<AccountLookupResponse>> handle(AccountLookupDto request) {
