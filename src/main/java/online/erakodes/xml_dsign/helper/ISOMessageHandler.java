@@ -24,13 +24,11 @@ public class ISOMessageHandler {
     /**
      * Formats a CAMT.003.001.07 message for account lookup.
      *
-     * @param messageId The message identifier (can be null to auto-generate)
-     * @param creDtTm   The creation date/time (can be null to use current time)
      * @param accountId The account ID to search for
      * @param mobile    The mobile number for contact details (optional; must match ISO PhoneNumber pattern if provided)
      * @return The formatted XML message as a string
      */
-    public static String formatCAMT00300107(String messageId, OffsetDateTime creDtTm, String accountId, String mobile) {
+    private static String formatCAMT00300107(String accountId, String mobile) {
         if (accountId == null || accountId.isEmpty()) {
             throw new IllegalArgumentException("Account ID is required");
         }
@@ -38,11 +36,11 @@ public class ISOMessageHandler {
         log.debug("Handling CAMT.003.001.07 Message Generation (Get Account)");
 
         // Generate message ID if not provided
-        var finalMessageId = messageId != null ? messageId : generateUniqueMessageId();
+        var finalMessageId = generateUniqueMessageId();
         log.info("Message ID: {}", finalMessageId);
 
         // Use current time if not provided
-        var finalCreDtTm = creDtTm != null ? creDtTm : OffsetDateTime.now();
+        var finalCreDtTm = OffsetDateTime.now();
 
         // Create the main message object
         var mx = new MxCamt00300107();
@@ -229,7 +227,7 @@ public class ISOMessageHandler {
         }
         var accountId = args[0];
         var mobile = args.length > 1 ? args[1] : null;
-        return formatCAMT00300107(null, null, accountId, mobile);
+        return formatCAMT00300107(accountId, mobile);
     }
 
     /**
