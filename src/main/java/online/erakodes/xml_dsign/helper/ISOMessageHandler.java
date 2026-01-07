@@ -8,6 +8,7 @@ import java.util.UUID;
 import com.prowidesoftware.swift.model.mx.*;
 import com.prowidesoftware.swift.model.mx.dic.*;
 import online.erakodes.xml_dsign.model.ContactDetails;
+import online.erakodes.xml_dsign.model.pacs.Pacs008Transfer;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,16 +82,52 @@ public class ISOMessageHandler {
                        String creditorName, String creditorAccountId, String purposeCode,
                        String remittanceInformation, String invoiceNumber,
                        LocalDate invoiceDate) {
-        return null;
+        String[] args = new String[] {
+            messageId,
+            creationDateTime != null ? creationDateTime.toString() : null,
+            instructionId,
+            endToEndId,
+            transactionId,
+            instructedAgentId,
+            creditorAgentId,
+            String.valueOf(amount),
+            currency,
+            settlementDate != null ? settlementDate.toString() : null,
+            debtorName,
+            debtorAccountId,
+            creditorName,
+            creditorAccountId,
+            purposeCode,
+            remittanceInformation,
+            invoiceNumber,
+            invoiceDate != null ? invoiceDate.toString() : null
+        };
+        return formatPACS00800108(args);
     }
 
     private static String formatPACS00800108(String[] args) {
         log.debug("Handling PACS.008.001.08 Message Generation (Payment Initiation)");
-        if (args == null || args.length < 1) throw new
-                IllegalArgumentException("At least account ID is required");
+        if (args == null || args.length < 17) throw new
+                IllegalArgumentException("Insufficient arguments provided");
 
-        var messageId = generateUniqueMessageId();
-        var creDtTm = OffsetDateTime.now();
+        var messageId = args[0] != null ? args[0] : generateUniqueMessageId();
+        var creDtTm = args[1] != null ? OffsetDateTime.parse(args[1]) : OffsetDateTime.now();
+        var instructionId = args[2];
+        var endToEndId = args[3];
+        var transactionId = args[4];
+        var instructedAgentId = args[5];
+        var creditorAgentId = args[6];
+        var amount = Double.parseDouble(args[7]);
+        var currency = args[8] != null ? args[8] : AcctOpnCcy;
+        var settlementDate = args[9] != null ? LocalDate.parse(args[9]) : LocalDate.now();
+        var debtorName = args[10];
+        var debtorAccountId = args[11];
+        var creditorName = args[12];
+        var creditorAccountId = args[13];
+        var purposeCode = args[14];
+        var remittanceInformation = args[15];
+        var invoiceNumber = args[16];
+        var invoiceDate = args[17] != null ? LocalDate.parse(args[17]) : null;
 
         var groupHdr = new GroupHeader93()
                 .setMsgId(messageId)
@@ -100,22 +137,22 @@ public class ISOMessageHandler {
                         .setSttlmMtd(SettlementMethod1Code.INDA))
                 .setInstdAgt(new BranchAndFinancialInstitutionIdentification6()
                         .setBrnchId(new BranchData3()
-                                .setId(FI_CODE)))
+                                .setId(instructedAgentId != null ? instructedAgentId : FI_CODE)))
                 .setInstgAgt(new BranchAndFinancialInstitutionIdentification6()
                         .setBrnchId(new BranchData3()
                                 .setId(FI_CODE)));
 
         var cdtTrfTxInf = new CreditTransferTransaction39()
                 .setPmtId(new PaymentIdentification7()
-                        .setInstrId(messageId)
-                        .setEndToEndId(messageId).setUETR("1"))
+                        .setInstrId(instructionId != null ? instructionId : messageId)
+                        .setEndToEndId(endToEndId != null ? endToEndId : messageId).setUETR(transactionId))
                 .setPmtTpInf(new PaymentTypeInformation28()
                         .setCtgyPurp(new CategoryPurpose1Choice()
-                                .setCd("000")))
+                                .setCd(purposeCode != null ? purposeCode : "000")))
                 .setIntrBkSttlmAmt(new ActiveCurrencyAndAmount()
-                        .setCcy(AcctOpnCcy)
-                        .setValue(BigDecimal.valueOf(Long.parseLong(args[8]))))
-                .setIntrBkSttlmDt(LocalDate.now())
+                        .setCcy(currency)
+                        .setValue(BigDecimal.valueOf(amount)))
+                .setIntrBkSttlmDt(settlementDate)
                 .setChrgBr(ChargeBearerType1Code.SHAR)
                 .setInitgPty(new PartyIdentification135()
                         .setNm(FI_NAME)
@@ -126,47 +163,54 @@ public class ISOMessageHandler {
                                                 .setSchmeNm(new OrganisationIdentificationSchemeName1Choice()
                                                         .setCd(FI_CODE))))))
                 .setDbtr(new PartyIdentification135()
-                        .setNm(args[11])
+                        .setNm(debtorName)
                         .setId(new Party38Choice()
                                 .setPrvtId(new PersonIdentification13()
                                         .addOthr(new GenericPersonIdentification1()
-                                                .setId(args[12])))))
+                                                .setId(debtorAccountId)))))
                 .setDbtrAcct(new CashAccount38()
-                        .setCcy(AcctOpnCcy)
+                        .setCcy(currency)
                         .setId(new AccountIdentification4Choice()
                                 .setOthr(new GenericAccountIdentification1()
-                                        .setId(args[11]))))
+                                        .setId(debtorAccountId))))
                 .setDbtrAgt(new BranchAndFinancialInstitutionIdentification6().setFinInstnId(new FinancialInstitutionIdentification18()
                         .setOthr(new GenericFinancialIdentification1().setId(FI_CODE))))
                 .setCdtr(new PartyIdentification135()
                         .setId(new Party38Choice()
                                 .setOrgId(new OrganisationIdentification29()))
-                        .setNm(args[13]))
+                        .setNm(creditorName))
                 .setCdtrAgt(new BranchAndFinancialInstitutionIdentification6()
                         .setFinInstnId(new FinancialInstitutionIdentification18()
-                                .setBICFI("SOME_BANK_BIC")))
+                                .setBICFI(creditorAgentId != null ? creditorAgentId : "SOME_BANK_BIC")))
                 .setCdtrAcct(new CashAccount38().setId(new AccountIdentification4Choice()
                         .setOthr(new GenericAccountIdentification1()
-                                .setId(args[13]))
+                                .setId(creditorAccountId))
                         .setIBAN("SOME_BANK_IBAN")))
                 .setPurp(new Purpose2Choice()
-                        .setCd(args[14]))
-                /*.setRmtInf(new RemittanceInformation16()
-                        .addUstrd(args[15])
-                        .addUstrd(args[16]));*/;
-        var rmtInf = new RemittanceInformation16()
-                .addUstrd(args[15])
-                .addUstrd(args[16]);
+                        .setCd(purposeCode));
 
-        var rfrdDoc = new ReferredDocumentInformation7()
-                .setTp(new ReferredDocumentType4()
-                        .setCdOrPrtry(new ReferredDocumentType3Choice()
-                                .setCd(DocumentType6Code.CINV)));
-        //.setNb(t.remittance().invoiceNumber())
-        //.setRltdDt(t.remittance().invoiceDate());
+        var rmtInf = new RemittanceInformation16();
+        if (remittanceInformation != null) {
+            rmtInf.addUstrd(remittanceInformation);
+        }
+        if (invoiceNumber != null) {
+            rmtInf.addUstrd(invoiceNumber);
+        }
 
-        rmtInf.addStrd(new StructuredRemittanceInformation16()
-                .addRfrdDocInf(rfrdDoc));
+        if (invoiceNumber != null || invoiceDate != null) {
+            var rfrdDoc = new ReferredDocumentInformation7()
+                    .setTp(new ReferredDocumentType4()
+                            .setCdOrPrtry(new ReferredDocumentType3Choice()
+                                    .setCd(DocumentType6Code.CINV)));
+            if (invoiceNumber != null) {
+                rfrdDoc.setNb(invoiceNumber);
+            }
+            if (invoiceDate != null) {
+                rfrdDoc.setRltdDt(invoiceDate);
+            }
+            rmtInf.addStrd(new StructuredRemittanceInformation16()
+                    .addRfrdDocInf(rfrdDoc));
+        }
         cdtTrfTxInf.setRmtInf(rmtInf);
 
         var fiToFi = new FIToFICustomerCreditTransferV08()
@@ -348,6 +392,29 @@ public class ISOMessageHandler {
      */
     public static String formatACMT00700102(String[] args) {
         return formatACMT00700102(args[0], args[1], args[2], OffsetDateTime.now(), OffsetDateTime.now(), args.length > 3 ? ContactDetails.fromArray(args) : null);
+    }
+
+    public static String formatPACS00800108(Pacs008Transfer transfer) {
+        return formatPACS00800108(
+                transfer.messageId(),
+                transfer.creationDateTime(),
+                transfer.instructionId(),
+                transfer.endToEndId(),
+                transfer.transactionId(),
+                transfer.instructedAgentId(),
+                transfer.creditor().agentId(),
+                transfer.amount(),
+                transfer.currency(),
+                transfer.settlementDate(),
+                transfer.debtor().name(),
+                transfer.debtor().accountId(),
+                transfer.creditor().name(),
+                transfer.creditor().accountId(),
+                transfer.purposeCode(),
+                transfer.remittance() != null ? transfer.remittance().unstructured() : null,
+                transfer.remittance() != null ? transfer.remittance().invoiceNumber() : null,
+                transfer.remittance() != null ? transfer.remittance().invoiceDate() : null
+        );
     }
 
     private static String generateUniqueMessageId() {
