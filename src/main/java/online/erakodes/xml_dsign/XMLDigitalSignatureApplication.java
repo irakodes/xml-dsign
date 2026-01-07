@@ -1,11 +1,7 @@
 package online.erakodes.xml_dsign;
 
 import lombok.RequiredArgsConstructor;
-import online.erakodes.xml_dsign.model.AccountLookupDto;
-import online.erakodes.xml_dsign.model.AccountLookupResponse;
-import online.erakodes.xml_dsign.model.AccountOpeningDto;
-import online.erakodes.xml_dsign.model.AccountOpeningResponse;
-import online.erakodes.xml_dsign.model.Result;
+import online.erakodes.xml_dsign.model.*;
 import online.erakodes.xml_dsign.service.IMessageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,13 +26,15 @@ public class XMLDigitalSignatureApplication {
 
 	private final IMessageHandler<AccountLookupDto, AccountLookupResponse> accountLookupHandler;
 	private final IMessageHandler<AccountOpeningDto, AccountOpeningResponse> accountOpeningHandler;
+	private final IMessageHandler<PaymentDto, TransactionResponse> paymentHandler;
 
 	public static void main(String[] args) {
 		SpringApplication.run(XMLDigitalSignatureApplication.class, args);
 	}
 
 	@GetMapping("/accounts/{id}")
-	public ResponseEntity<CompletableFuture<Result<AccountLookupResponse>>> lookupAccount(@PathVariable String id) {
+	public ResponseEntity<CompletableFuture<Result<AccountLookupResponse>>>
+	lookupAccount(@PathVariable String id) {
 		log.info("Handling account lookup with ID {}", id);
 		var response = accountLookupHandler
 				.handle(new AccountLookupDto(id, "", ""));
@@ -45,13 +43,22 @@ public class XMLDigitalSignatureApplication {
 	}
 
 	@PostMapping("/accounts")
-	public ResponseEntity<CompletableFuture<Result<AccountOpeningResponse>>> createAccount(@RequestBody AccountOpeningDto request) {
+	public ResponseEntity<CompletableFuture<Result<AccountOpeningResponse>>>
+	createAccount(@RequestBody AccountOpeningDto request) {
 		log.info("Handling account creation for account ID: {}", request.accountId());
 
 		if (request.withProxy() && request.proxy() == null) throw
 				new IllegalArgumentException("An account proxy is required for this call");
 
 		var response = accountOpeningHandler.handle(request);
+
+		return ResponseEntity.ok(response);
+	}
+
+	@PostMapping("/transfers")
+	public ResponseEntity<?> transferFunds(@RequestBody PaymentDto request) {
+		log.info("Handling transfer funds request for account ID: {}", request.initiatorId());
+		var response = paymentHandler.handle(request);
 
 		return ResponseEntity.ok(response);
 	}

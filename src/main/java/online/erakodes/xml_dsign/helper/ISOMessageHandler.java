@@ -417,7 +417,7 @@ public class ISOMessageHandler {
         );
     }
 
-    private static String generateUniqueMessageId() {
+    public static String generateUniqueMessageId() {
         return System.currentTimeMillis() + UUID.randomUUID().toString()
                 .replaceAll("-", "")
                 .replaceAll("[a-zA-Z]", "").substring(0, 2);
