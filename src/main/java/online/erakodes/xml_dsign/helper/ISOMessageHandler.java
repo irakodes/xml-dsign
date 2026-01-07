@@ -24,6 +24,47 @@ public class ISOMessageHandler {
     private final static String FI_NAME = "Guaranty Trust Bank (Rwanda) Ltd";
     private final static String FI_CODE = "070";
 
+    public static String
+    formatPACS00200110(String transactionId, String originalInstructionId, String endToEndId) {
+        return formatPACS00200110(new String[]{
+                transactionId,
+                originalInstructionId,
+                endToEndId
+        });
+    }
+
+    private static String formatPACS00200110(String[] args) {
+
+        var messageId = generateUniqueMessageId();
+
+        var grpHdr = new GroupHeader91()
+                .setMsgId(messageId)
+                .setCreDtTm(OffsetDateTime.now());
+
+        var txInfAndSts = new PaymentTransaction110()
+                .setOrgnlTxId(args[0])
+                .setOrgnlEndToEndId(args[2])
+                .setOrgnlInstrId(args[1])
+                .setTxSts("ACCP");
+
+        var report = new FIToFIPaymentStatusReportV10()
+                .setGrpHdr(grpHdr)
+                .addTxInfAndSts(txInfAndSts);
+
+        var appHdr = new BusinessAppHdrV04();
+        appHdr.setBizMsgIdr(messageId);
+        appHdr.setCreationDate(true);
+        appHdr.setMsgDefIdr("pacs.002.001.10");
+
+        var conf = getMxWriteConfiguration();
+        var mxMessage = new MxPacs00200110().setFIToFIPmtStsRpt(report);
+
+        mxMessage.setAppHdr(appHdr);
+        mxMessage.getAppHdr().setCreationDate(true);
+
+        return mxMessage.message(conf);
+    }
+
     /**
      * Formats a PACS.002.001.10 message for payment status reporting.
      *
