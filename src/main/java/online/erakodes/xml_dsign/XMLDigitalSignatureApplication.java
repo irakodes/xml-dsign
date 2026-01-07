@@ -63,4 +63,15 @@ public class XMLDigitalSignatureApplication {
 		return ResponseEntity.ok(response);
 	}
 
+	/**
+	 * Only for the purpose of testing the status endpoint
+	 ***/
+	@PostMapping("/transfers/{transactionId}/status")
+	public ResponseEntity<?> transferFunds(@PathVariable String transactionId) {
+		log.info("Handling PACS.002.001.10 Transaction Status Call for {}", transactionId);
+		var response = paymentHandler.handle(request);
+
+		return ResponseEntity.ok(response);
+	}
+
 }

@@ -24,6 +24,47 @@ public class ISOMessageHandler {
     private final static String FI_NAME = "Guaranty Trust Bank (Rwanda) Ltd";
     private final static String FI_CODE = "070";
 
+    public static String
+    formatPACS00200110(String transactionId, String originalInstructionId, String endToEndId) {
+        return formatPACS00200110(new String[]{
+                transactionId,
+                originalInstructionId,
+                endToEndId
+        });
+    }
+
+    private static String formatPACS00200110(String[] args) {
+
+        var messageId = generateUniqueMessageId();
+
+        var grpHdr = new GroupHeader91()
+                .setMsgId(messageId)
+                .setCreDtTm(OffsetDateTime.now());
+
+        var txInfAndSts = new PaymentTransaction110()
+                .setOrgnlTxId(args[0])
+                .setOrgnlEndToEndId(args[2])
+                .setOrgnlInstrId(args[1])
+                .setTxSts("ACCP");
+
+        var report = new FIToFIPaymentStatusReportV10()
+                .setGrpHdr(grpHdr)
+                .addTxInfAndSts(txInfAndSts);
+
+        var appHdr = new BusinessAppHdrV04();
+        appHdr.setBizMsgIdr(messageId);
+        appHdr.setCreationDate(true);
+        appHdr.setMsgDefIdr("pacs.002.001.10");
+
+        var conf = getMxWriteConfiguration();
+        var mxMessage = new MxPacs00200110().setFIToFIPmtStsRpt(report);
+
+        mxMessage.setAppHdr(appHdr);
+        mxMessage.getAppHdr().setCreationDate(true);
+
+        return mxMessage.message(conf);
+    }
+
     /**
      * Formats a CAMT.003.001.07 message for account lookup.
      *
@@ -73,6 +114,30 @@ public class ISOMessageHandler {
         return mx.message(conf);
     }
 
+    /**
+     * Formats a PACS.008.001.08 message for payment initiation.
+     *
+     * @param messageId             The unique identifier for the message.
+     * @param creationDateTime      The date and time when the message was created.
+     * @param instructionId         The instruction identifier associated with the transaction.
+     * @param endToEndId            The end-to-end identifier for tracking the transaction.
+     * @param transactionId         A unique identifier for the transaction.
+     * @param instructedAgentId     The identifier of the instructed financial institution (sending bank).
+     * @param creditorAgentId       The identifier of the creditor's financial institution (receiving bank).
+     * @param amount                The transaction amount in the specified currency.
+     * @param currency              The currency of the transaction (e.g., USD, EUR).
+     * @param settlementDate        The date on which the transaction is settled.
+     * @param debtorName            The name of the debtor (payer).
+     * @param debtorAccountId       The account ID of the debtor.
+     * @param creditorName          The name of the creditor (payee).
+     * @param creditorAccountId     The account ID of the creditor.
+     * @param purposeCode           The code specifying the purpose of the transaction.
+     * @param remittanceInformation Additional unstructured remittance information.
+     * @param invoiceNumber         The invoice number related to the payment (if applicable).
+     * @param invoiceDate           The date of the invoice related to the payment (if applicable).
+     * @return A formatted PACS.008.001.08 XML message as a string.
+     * @throws IllegalArgumentException If insufficient arguments are provided.
+     */
     private static String
     formatPACS00800108(String messageId, OffsetDateTime creationDateTime, String instructionId,
                        String endToEndId, String transactionId,
@@ -82,29 +147,59 @@ public class ISOMessageHandler {
                        String creditorName, String creditorAccountId, String purposeCode,
                        String remittanceInformation, String invoiceNumber,
                        LocalDate invoiceDate) {
-        String[] args = new String[] {
-            messageId,
-            creationDateTime != null ? creationDateTime.toString() : null,
-            instructionId,
-            endToEndId,
-            transactionId,
-            instructedAgentId,
-            creditorAgentId,
-            String.valueOf(amount),
-            currency,
-            settlementDate != null ? settlementDate.toString() : null,
-            debtorName,
-            debtorAccountId,
-            creditorName,
-            creditorAccountId,
-            purposeCode,
-            remittanceInformation,
-            invoiceNumber,
-            invoiceDate != null ? invoiceDate.toString() : null
+        String[] args = new String[]{
+                messageId,
+                creationDateTime != null ? creationDateTime.toString() : null,
+                instructionId,
+                endToEndId,
+                transactionId,
+                instructedAgentId,
+                creditorAgentId,
+                String.valueOf(amount),
+                currency,
+                settlementDate != null ? settlementDate.toString() : null,
+                debtorName,
+                debtorAccountId,
+                creditorName,
+                creditorAccountId,
+                purposeCode,
+                remittanceInformation,
+                invoiceNumber,
+                invoiceDate != null ? invoiceDate.toString() : null
         };
         return formatPACS00800108(args);
     }
 
+    /**
+     * Formats a PACS.008.001.08 message for payment initiation.
+     * <p>
+     * This method handles the creation of a PACS.008.001.08 XML message,
+     * which is typically used for financial institution-to-financial institution customer credit transfers.
+     * The method ensures that necessary data is included for transaction processing,
+     * such as payment identifiers, participant details, and settlement information.
+     *
+     * @param args An array of input arguments containing the following details:
+     *             - args[0]: Message ID (unique identifier for the message, can be null to auto-generate).
+     *             - args[1]: Creation Date and Time (ISO-8601 formatted String or null for the current time).
+     *             - args[2]: Instruction ID (the instruction reference for the transaction).
+     *             - args[3]: End-to-End ID (the end-to-end identifier for the transaction).
+     *             - args[4]: Transaction ID (unique transaction identifier).
+     *             - args[5]: Instructed Agent ID (sending bank's identifier).
+     *             - args[6]: Creditor Agent ID (receiving bank's identifier).
+     *             - args[7]: Amount (transaction amount as a String, must be parsable to a double).
+     *             - args[8]: Currency (three-letter ISO currency code, defaults to a predefined currency if null).
+     *             - args[9]: Settlement Date (ISO-8601 formatted date String or null for today's date).
+     *             - args[10]: Debtor Name (the name of the payer).
+     *             - args[11]: Debtor Account ID (the account ID of the payer).
+     *             - args[12]: Creditor Name (the name of the payee).
+     *             - args[13]: Creditor Account ID (the account ID of the payee).
+     *             - args[14]: Purpose Code (code specifying the transaction purpose, optional).
+     *             - args[15]: Remittance Information (unstructured remittance details, optional).
+     *             - args[16]: Invoice Number (the related invoice number, optional).
+     *             - args[17]: Invoice Date (ISO-8601 formatted date String, optional).
+     * @return A PACS.008.001.08 formatted XML message as a String.
+     * @throws IllegalArgumentException If the minimum required arguments are not provided.
+     */
     private static String formatPACS00800108(String[] args) {
         log.debug("Handling PACS.008.001.08 Message Generation (Payment Initiation)");
         if (args == null || args.length < 17) throw new
