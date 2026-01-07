@@ -115,19 +115,11 @@ public class ISOMessageHandler {
         return mx.message(conf);
     }
 
-    public static String formatACMT00700102(String messageId, String accountId, String accountName, String fullName,
+    private static String formatACMT00700102(String accountId, String accountName, String fullName,
                                             OffsetDateTime registrationDate, OffsetDateTime dateOfBirth, ContactDetails contactDetails) {
         log.debug("Handling CAMT.007.001.02 Message Generation (Account Creation)");
-        messageId = messageId != null ? messageId : generateUniqueMessageId();
+        var messageId = generateUniqueMessageId();
         var finalCreDtTm = OffsetDateTime.now();
-
-        //var mxMessage = new MxCamt00700102();
-        var mxMessage = new MxAcmt00700102();
-
-        var appHdr = new BusinessAppHdrV04();
-        appHdr.setBizMsgIdr(messageId);
-        appHdr.setCreDt(finalCreDtTm);
-        mxMessage.setAppHdr(appHdr);
 
         var msgId = new MessageIdentification1()
                 .setId(messageId)
@@ -184,7 +176,6 @@ public class ISOMessageHandler {
                                 .setEmailAdr(contactDetails.email())
                                 .setMobNb(contactDetails.mobileNumber())));
 
-
         // var supplementaryData = new SupplementaryData1().setPlcAndNm("INSE|nickname")
         //         .setEnvlp(new SupplementaryDataEnvelope1().setAny(
         //                 new Object() {
@@ -205,7 +196,24 @@ public class ISOMessageHandler {
         msgHdr.setMsgId(messageId);
         msgHdr.setCreDtTm(finalCreDtTm);
 
-        return "";
+        /* var appHdr = new BusinessAppHdrV04()
+                .setBizMsgIdr(messageId)
+                .setCreDt(finalCreDtTm)
+                .setMsgDefIdr("acmt.007.001.02"); */
+
+        //var mxMessage = new MxCamt00700102();
+        var mxMessage = new MxAcmt00700102()
+                .setAcctOpngReq(acctOpeningRequest);
+
+        var conf = new MxWriteConfiguration();
+        conf.envelopeType = EnvelopeType.CUSTOM;
+        conf.rootElement = "BusinessMessage";
+        conf.documentPrefix = null;
+        conf.headerPrefix = null;
+        conf.includeXMLDeclaration = true;
+        conf.useCategoryAsDocumentPrefix = false;
+
+        return mxMessage.message(conf);
     }
 
     /**
@@ -222,6 +230,23 @@ public class ISOMessageHandler {
         var accountId = args[0];
         var mobile = args.length > 1 ? args[1] : null;
         return formatCAMT00300107(null, null, accountId, mobile);
+    }
+
+    /**
+     * Legacy method for backward compatibility.
+     * Formats an ACMT.007.001.02 message using array arguments.
+     *
+     * @param args Array of input parameters with the following structure:
+     *             - args[0]: The account ID (required).
+     *             - args[1]: The account name (required).
+     *             - args[2]: The full name of the account holder (required).
+     *             - args[3 And Beyond]: Optional additional arguments that can be parsed into contact details
+     *                                   (e.g., email, mobile number) through {@link ContactDetails#fromArray(String[])}.
+     * @return The formatted XML message as a string representing ACMT.007.001.02.
+     *         The result encapsulates the account opening request with the provided details.
+     */
+    public static String formatACMT00700102(String[] args) {
+        return formatACMT00700102(args[0], args[1], args[2], OffsetDateTime.now(), OffsetDateTime.now(), args.length > 3 ? ContactDetails.fromArray(args) : null);
     }
 
     private static String generateUniqueMessageId() {
