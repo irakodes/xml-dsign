@@ -1,5 +1,6 @@
 package online.erakodes.xml_dsign.helper;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -71,6 +72,118 @@ public class ISOMessageHandler {
         return mx.message(conf);
     }
 
+    private static String
+    formatPACS00800108(String messageId, OffsetDateTime creationDateTime, String instructionId,
+                       String endToEndId, String transactionId,
+                       String instructedAgentId, String creditorAgentId,
+                       double amount, String currency, LocalDate settlementDate,
+                       String debtorName, String debtorAccountId,
+                       String creditorName, String creditorAccountId, String purposeCode,
+                       String remittanceInformation, String invoiceNumber,
+                       LocalDate invoiceDate) {
+        return null;
+    }
+
+    private static String formatPACS00800108(String[] args) {
+        log.debug("Handling PACS.008.001.08 Message Generation (Payment Initiation)");
+        if (args == null || args.length < 1) throw new
+                IllegalArgumentException("At least account ID is required");
+
+        var messageId = generateUniqueMessageId();
+        var creDtTm = OffsetDateTime.now();
+
+        var groupHdr = new GroupHeader93()
+                .setMsgId(messageId)
+                .setCreDtTm(creDtTm)
+                .setNbOfTxs("1")
+                .setSttlmInf(new SettlementInstruction7()
+                        .setSttlmMtd(SettlementMethod1Code.INDA))
+                .setInstdAgt(new BranchAndFinancialInstitutionIdentification6()
+                        .setBrnchId(new BranchData3()
+                                .setId(FI_CODE)))
+                .setInstgAgt(new BranchAndFinancialInstitutionIdentification6()
+                        .setBrnchId(new BranchData3()
+                                .setId(FI_CODE)));
+
+        var cdtTrfTxInf = new CreditTransferTransaction39()
+                .setPmtId(new PaymentIdentification7()
+                        .setInstrId(messageId)
+                        .setEndToEndId(messageId).setUETR("1"))
+                .setPmtTpInf(new PaymentTypeInformation28()
+                        .setCtgyPurp(new CategoryPurpose1Choice()
+                                .setCd("000")))
+                .setIntrBkSttlmAmt(new ActiveCurrencyAndAmount()
+                        .setCcy(AcctOpnCcy)
+                        .setValue(BigDecimal.valueOf(Long.parseLong(args[8]))))
+                .setIntrBkSttlmDt(LocalDate.now())
+                .setChrgBr(ChargeBearerType1Code.SHAR)
+                .setInitgPty(new PartyIdentification135()
+                        .setNm(FI_NAME)
+                        .setId(new Party38Choice()
+                                .setOrgId(new OrganisationIdentification29()
+                                        .addOthr(new GenericOrganisationIdentification1()
+                                                .setId(FI_CODE)
+                                                .setSchmeNm(new OrganisationIdentificationSchemeName1Choice()
+                                                        .setCd(FI_CODE))))))
+                .setDbtr(new PartyIdentification135()
+                        .setNm(args[11])
+                        .setId(new Party38Choice()
+                                .setPrvtId(new PersonIdentification13()
+                                        .addOthr(new GenericPersonIdentification1()
+                                                .setId(args[12])))))
+                .setDbtrAcct(new CashAccount38()
+                        .setCcy(AcctOpnCcy)
+                        .setId(new AccountIdentification4Choice()
+                                .setOthr(new GenericAccountIdentification1()
+                                        .setId(args[11]))))
+                .setDbtrAgt(new BranchAndFinancialInstitutionIdentification6().setFinInstnId(new FinancialInstitutionIdentification18()
+                        .setOthr(new GenericFinancialIdentification1().setId(FI_CODE))))
+                .setCdtr(new PartyIdentification135()
+                        .setId(new Party38Choice()
+                                .setOrgId(new OrganisationIdentification29()))
+                        .setNm(args[13]))
+                .setCdtrAgt(new BranchAndFinancialInstitutionIdentification6()
+                        .setFinInstnId(new FinancialInstitutionIdentification18()
+                                .setBICFI("SOME_BANK_BIC")))
+                .setCdtrAcct(new CashAccount38().setId(new AccountIdentification4Choice()
+                        .setOthr(new GenericAccountIdentification1()
+                                .setId(args[13]))
+                        .setIBAN("SOME_BANK_IBAN")))
+                .setPurp(new Purpose2Choice()
+                        .setCd(args[14]))
+                /*.setRmtInf(new RemittanceInformation16()
+                        .addUstrd(args[15])
+                        .addUstrd(args[16]));*/;
+        var rmtInf = new RemittanceInformation16()
+                .addUstrd(args[15])
+                .addUstrd(args[16]);
+
+        var rfrdDoc = new ReferredDocumentInformation7()
+                .setTp(new ReferredDocumentType4()
+                        .setCdOrPrtry(new ReferredDocumentType3Choice()
+                                .setCd(DocumentType6Code.CINV)));
+        //.setNb(t.remittance().invoiceNumber())
+        //.setRltdDt(t.remittance().invoiceDate());
+
+        rmtInf.addStrd(new StructuredRemittanceInformation16()
+                .addRfrdDocInf(rfrdDoc));
+        cdtTrfTxInf.setRmtInf(rmtInf);
+
+        var fiToFi = new FIToFICustomerCreditTransferV08()
+                .setGrpHdr(groupHdr)
+                .addCdtTrfTxInf(cdtTrfTxInf);
+
+        var mxMessage = new MxPacs00800108().setFIToFICstmrCdtTrf(fiToFi);
+
+        var appHdr = new BusinessAppHdrV04();
+        appHdr.setBizMsgIdr(messageId);
+        appHdr.setCreationDate(true);
+        appHdr.setMsgDefIdr("pacs.008.001.08");
+        mxMessage.setAppHdr(appHdr);
+
+        return mxMessage.message(getMxWriteConfiguration());
+    }
+
     private static @NonNull AccountQuery3 getAccountQuery3(String accountId, String mobile) {
         var acctQryDef = new AccountQuery3();
         var acctCritChoice = new AccountCriteria3Choice();
@@ -109,7 +222,7 @@ public class ISOMessageHandler {
     }
 
     private static String formatACMT00700102(String accountId, String accountName, String fullName,
-                                            OffsetDateTime registrationDate, OffsetDateTime dateOfBirth, ContactDetails contactDetails) {
+                                             OffsetDateTime registrationDate, OffsetDateTime dateOfBirth, ContactDetails contactDetails) {
         log.debug("Handling CAMT.007.001.02 Message Generation (Account Creation)");
         var messageId = generateUniqueMessageId();
         var finalCreDtTm = OffsetDateTime.now();
@@ -229,9 +342,9 @@ public class ISOMessageHandler {
      *             - args[1]: The account name (required).
      *             - args[2]: The full name of the account holder (required).
      *             - args[3 And Beyond]: Optional additional arguments that can be parsed into contact details
-     *                                   (e.g., email, mobile number) through {@link ContactDetails#fromArray(String[])}.
+     *             (e.g., email, mobile number) through {@link ContactDetails#fromArray(String[])}.
      * @return The formatted XML message as a string representing ACMT.007.001.02.
-     *         The result encapsulates the account opening request with the provided details.
+     * The result encapsulates the account opening request with the provided details.
      */
     public static String formatACMT00700102(String[] args) {
         return formatACMT00700102(args[0], args[1], args[2], OffsetDateTime.now(), OffsetDateTime.now(), args.length > 3 ? ContactDetails.fromArray(args) : null);
