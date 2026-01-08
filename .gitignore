@@ -38,3 +38,5 @@ out/
 
 ### JTE ###
 /jte-classes/
+
+.DS_Store
