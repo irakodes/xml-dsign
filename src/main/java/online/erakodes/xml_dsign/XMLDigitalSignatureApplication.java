@@ -27,6 +27,7 @@ public class XMLDigitalSignatureApplication {
 	private final IMessageHandler<AccountLookupDto, AccountLookupResponse> accountLookupHandler;
 	private final IMessageHandler<AccountOpeningDto, AccountOpeningResponse> accountOpeningHandler;
 	private final IMessageHandler<PaymentDto, TransactionResponse> paymentHandler;
+	private final IMessageHandler<String, TransactionStatusResponse> txStatusHandler;
 
 	public static void main(String[] args) {
 		SpringApplication.run(XMLDigitalSignatureApplication.class, args);
@@ -66,10 +67,10 @@ public class XMLDigitalSignatureApplication {
 	/**
 	 * Only for the purpose of testing the status endpoint
 	 ***/
-	@PostMapping("/transfers/{transactionId}/status")
+	@GetMapping("/transfers/{transactionId}/status")
 	public ResponseEntity<?> transferFunds(@PathVariable String transactionId) {
 		log.info("Handling PACS.002.001.10 Transaction Status Call for {}", transactionId);
-		var response = paymentHandler.handle(request);
+		var response = txStatusHandler.handle(transactionId);
 
 		return ResponseEntity.ok(response);
 	}
