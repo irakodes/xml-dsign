@@ -1,8 +1,7 @@
 package online.erakodes.xml_dsign;
 
 import lombok.RequiredArgsConstructor;
-import online.erakodes.xml_dsign.model.AccountLookupDto;
-import online.erakodes.xml_dsign.model.AccountLookupResponse;
+import online.erakodes.xml_dsign.model.*;
 import online.erakodes.xml_dsign.service.IMessageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +10,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @SpringBootApplication
@@ -19,19 +22,55 @@ import org.springframework.web.bind.annotation.RestController;
 public class XMLDigitalSignatureApplication {
 
 	private final static Logger log = LoggerFactory
-	.getLogger(XMLDigitalSignatureApplication.class);
+			.getLogger(XMLDigitalSignatureApplication.class);
 
-	private final IMessageHandler<AccountLookupDto, AccountLookupResponse> handler;
+	private final IMessageHandler<AccountLookupDto, AccountLookupResponse> accountLookupHandler;
+	private final IMessageHandler<AccountOpeningDto, AccountOpeningResponse> accountOpeningHandler;
+	private final IMessageHandler<PaymentDto, TransactionResponse> paymentHandler;
+	private final IMessageHandler<String, TransactionStatusResponse> txStatusHandler;
 
 	public static void main(String[] args) {
 		SpringApplication.run(XMLDigitalSignatureApplication.class, args);
 	}
 
 	@GetMapping("/accounts/{id}")
-	public ResponseEntity<?> lookupAccount(@PathVariable String id) {
+	public ResponseEntity<CompletableFuture<Result<AccountLookupResponse>>>
+	lookupAccount(@PathVariable String id) {
 		log.info("Handling account lookup with ID {}", id);
-		var response = handler
-		.handle(new AccountLookupDto(id, "", ""));
+		var response = accountLookupHandler
+				.handle(new AccountLookupDto(id, "", ""));
+
+		return ResponseEntity.ok(response);
+	}
+
+	@PostMapping("/accounts")
+	public ResponseEntity<CompletableFuture<Result<AccountOpeningResponse>>>
+	createAccount(@RequestBody AccountOpeningDto request) {
+		log.info("Handling account creation for account ID: {}", request.accountId());
+
+		if (request.withProxy() && request.proxy() == null) throw
+				new IllegalArgumentException("An account proxy is required for this call");
+
+		var response = accountOpeningHandler.handle(request);
+
+		return ResponseEntity.ok(response);
+	}
+
+	@PostMapping("/transfers")
+	public ResponseEntity<?> transferFunds(@RequestBody PaymentDto request) {
+		log.info("Handling transfer funds request for account ID: {}", request.initiatorId());
+		var response = paymentHandler.handle(request);
+
+		return ResponseEntity.ok(response);
+	}
+
+	/**
+	 * Only for the purpose of testing the status endpoint
+	 ***/
+	@GetMapping("/transfers/{transactionId}/status")
+	public ResponseEntity<?> transferFunds(@PathVariable String transactionId) {
+		log.info("Handling PACS.002.001.10 Transaction Status Call for {}", transactionId);
+		var response = txStatusHandler.handle(transactionId);
 
 		return ResponseEntity.ok(response);
 	}

@@ -5,5 +5,5 @@ import online.erakodes.xml_dsign.model.Result;
 import java.util.concurrent.CompletableFuture;
 
 public interface IMessageHandler<I, O> {
-    CompletableFuture<Result<O>> handle(I request); // <1>
+    CompletableFuture<Result<O>> handle(I request);
 }
