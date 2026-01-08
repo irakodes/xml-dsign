@@ -8,6 +8,13 @@ spring:
     group: online.erakodes
     version: 0.0.1
 
+application:
+  properties:
+    security:
+      keys:
+        location: ""
+        pass: "changeit" // This should be encrypted
+
 # Data Source Configurations
   datasource:
     url: jdbc:sqlserver://127.0.0.1:1433;databaseName=master;encrypt=false;trustServerCertificate=false;loginTimeout=30;
