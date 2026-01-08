@@ -26,15 +26,15 @@ public class ISOMessageHandler {
 
     /**
      * Formats a PACS.002.001.10 message for payment status reporting.
-     *
+     * <p>
      * This method handles the creation of a PACS.002.001.10 XML message
      * used for reporting the status of a financial transaction.
      * The status is usually shared between financial institutions to
      * indicate if a transaction was accepted, rejected, or required further processing.
      *
-     * @param transactionId The unique identifier of the original transaction being reported on.
+     * @param transactionId         The unique identifier of the original transaction being reported on.
      * @param originalInstructionId The instruction identifier associated with the original transaction.
-     * @param endToEndId The end-to-end identifier for tracking the transaction.
+     * @param endToEndId            The end-to-end identifier for tracking the transaction.
      * @return A PACS.002.001.10 formatted XML message as a String.
      */
     public static String
