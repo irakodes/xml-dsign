@@ -24,6 +24,19 @@ public class ISOMessageHandler {
     private final static String FI_NAME = "Guaranty Trust Bank (Rwanda) Ltd";
     private final static String FI_CODE = "070";
 
+    /**
+     * Formats a PACS.002.001.10 message for payment status reporting.
+     *
+     * This method handles the creation of a PACS.002.001.10 XML message
+     * used for reporting the status of a financial transaction.
+     * The status is usually shared between financial institutions to
+     * indicate if a transaction was accepted, rejected, or required further processing.
+     *
+     * @param transactionId The unique identifier of the original transaction being reported on.
+     * @param originalInstructionId The instruction identifier associated with the original transaction.
+     * @param endToEndId The end-to-end identifier for tracking the transaction.
+     * @return A PACS.002.001.10 formatted XML message as a String.
+     */
     public static String
     formatPACS00200110(String transactionId, String originalInstructionId, String endToEndId) {
         return formatPACS00200110(new String[]{
@@ -33,6 +46,23 @@ public class ISOMessageHandler {
         });
     }
 
+    /**
+     * Formats a PACS.002.001.10 message for payment status reporting.
+     * <p>
+     * This method generates a PACS.002.001.10 XML message that communicates the status
+     * of a financial transaction between financial institutions. It is typically used
+     * to confirm whether a transaction has been accepted, rejected, or is undergoing
+     * further processing.
+     * <p>
+     * The method constructs the message by populating the necessary group header,
+     * transaction information, and application header fields.
+     *
+     * @param args An array of input parameters containing:
+     *             - args[0]: Original Transaction ID (OrgnlTxId) to identify the referenced transaction.
+     *             - args[1]: Original Instruction ID (OrgnlInstrId) associated with the referenced transaction.
+     *             - args[2]: Original End-to-End ID (OrgnlEndToEndId) designed for end-to-end tracking.
+     * @return A PACS.002.001.10 formatted XML message as a String.
+     */
     private static String formatPACS00200110(String[] args) {
 
         var messageId = generateUniqueMessageId();
