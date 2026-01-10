@@ -3,7 +3,6 @@ package online.erakodes.xmldsig.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.*;
 import java.security.cert.CertificateException;
@@ -33,7 +32,8 @@ public class KeyHandler {
                     throw new IllegalStateException("Keystore not found");
                 }
 
-                KEY_STORE.load(is, KEYSTORE_PASSWORD);
+                // KEY_STORE.load(is, KEYSTORE_PASSWORD);
+                KEY_STORE.load(is, "changeit".toCharArray());
             } catch (IOException | CertificateException | NoSuchAlgorithmException e) {
                 throw new RuntimeException(e);
             }
@@ -57,33 +57,27 @@ public class KeyHandler {
 
     public static PrivateKey getPrivateKey(String keyPass) {
         try {
-            var ks = KeyStore.getInstance(KEY_STORE_TYPE);
-            ks.load(new FileInputStream(KEY_STORE_PATH), keyPass.toCharArray());
-
-            // Log all Key Aliases
+            var ks = getKeyStore();
             ks.aliases().asIterator().forEachRemaining(System.out::println);
 
             var key = ks.getKey("ekash prod", keyPass.toCharArray());
             log.info("KeyStore Key Algorithm fetched: {}", key.getAlgorithm());
 
             return (PrivateKey) key;
-        } catch (UnrecoverableKeyException | NoSuchAlgorithmException | IOException | CertificateException |
-                 KeyStoreException e) {
+        } catch (UnrecoverableKeyException | NoSuchAlgorithmException | KeyStoreException e) {
             throw new RuntimeException(e);
         }
     }
 
     public static X509Certificate getCertificate(String keyPass) {
         try {
-            var ks = KeyStore.getInstance("JKS");
-            ks.load(new java.io.FileInputStream(KEY_STORE_PATH), keyPass.toCharArray());
+            var ks = getKeyStore();
 
             var certificate = ks.getCertificate("ekash prod");
             log.info("KeyStore certificate fetched: {} ", certificate.getType());
 
             return (X509Certificate) certificate;
-        } catch (NoSuchAlgorithmException | IOException | CertificateException |
-                 KeyStoreException e) {
+        } catch (KeyStoreException e) {
             log.error("Error while fetching certificate from keystore: {}", e.getMessage(), e);
             throw new RuntimeException(e);
         }

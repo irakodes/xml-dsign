@@ -1,6 +1,7 @@
 package online.erakodes.xmldsig.web;
 
 import lombok.RequiredArgsConstructor;
+import online.erakodes.xmldsig.model.Result;
 import online.erakodes.xmldsig.service.BodySigningService;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -20,7 +21,7 @@ import java.nio.charset.StandardCharsets;
 
 @RestControllerAdvice
 @RequiredArgsConstructor
-public class SignedXmlResponseAdvice implements ResponseBodyAdvice<SignedMxMessage> {
+public class SignedXmlResponseAdvice implements ResponseBodyAdvice<Object> {
 
     private final BodySigningService signingService;
 
@@ -36,7 +37,6 @@ public class SignedXmlResponseAdvice implements ResponseBodyAdvice<SignedMxMessa
         if (SignedMxMessage.class.isAssignableFrom(bodyType)) {
             log.debug("SignedXmlResponseAdvice supports message return type [{}]",
                     bodyType.getSimpleName());
-
             return true;
         }
 
@@ -57,17 +57,40 @@ public class SignedXmlResponseAdvice implements ResponseBodyAdvice<SignedMxMessa
     }
 
     @Override
-    public @Nullable SignedMxMessage beforeBodyWrite(
-            @Nullable SignedMxMessage body, @Nullable MethodParameter returnType,
+    public @Nullable Object beforeBodyWrite(
+            @Nullable Object body, @Nullable MethodParameter returnType,
             @Nullable MediaType selectedContentType, @Nullable Class<? extends HttpMessageConverter<?>>
                     selectedConverterType,
             @Nullable ServerHttpRequest request, @Nullable ServerHttpResponse response) {
-        if (body == null) return null;
+        if (body == null) {
+            log.debug("Response body is null, skipping signing");
+            return null;
+        }
 
-        log.info("XML Signing The Response Body {} bytes",
-                body.getSignedContent().getBytes(StandardCharsets.UTF_8));
+        log.debug("Processing response body of type: {}", body.getClass().getName());
 
-        return signingService.wrapAndSign(body);
+        // Handle direct SignedMxMessage
+        if (body instanceof SignedMxMessage signedMessage) {
+            log.info("XML Signing The Response Body {} bytes",
+                    signedMessage.getSignedContent().getBytes(StandardCharsets.UTF_8).length);
+            return signingService.wrapAndSign(signedMessage);
+        }
+
+        // Handle Result<SignedMxMessage>
+        if (body instanceof Result<?> result) {
+            if (result instanceof Result.Ok<?> ok && ok.data() instanceof SignedMxMessage signed) {
+                log.info("XML Signing The Response Body from Result<SignedMxMessage> {} bytes",
+                        signed.getSignedContent().getBytes(StandardCharsets.UTF_8).length);
+
+                var signedMessage = signingService.wrapAndSign(signed);
+
+                return new Result.Ok<>(signedMessage, ok.details());
+            }
+        }
+
+        log.debug("Response body does not contain a SignedMxMessage (type: {}), skipping signing",
+                body.getClass().getName());
+        return body;
     }
 
 
@@ -77,17 +100,51 @@ public class SignedXmlResponseAdvice implements ResponseBodyAdvice<SignedMxMessa
      */
     private Class<?> extractGenericTypeFromResponseEntity(MethodParameter returnType) {
         try {
-            var genericType = returnType.getGenericParameterType();
+            var isReturnType = returnType.getParameterIndex() == -1;
+            log.debug("Is return type: {}, parameter index: {}", isReturnType, returnType.getParameterIndex());
+
+            // For return types, we need to get the generic return type differently
+            // Try getNestedGenericParameterType() first
+            var genericType = returnType.getNestedGenericParameterType();
+            log.debug("Nested generic parameter type: {}", genericType);
+
+            // If that doesn't work for return types, try getting it from the method's return type
+            if (genericType == Object.class) {
+                if (isReturnType && returnType.getMethod() != null) {
+                    var methodReturnType = returnType.getMethod().getGenericReturnType();
+                    log.info("Method generic return type: {}", methodReturnType);
+                    genericType = methodReturnType;
+                }
+            }
 
             if (genericType instanceof ParameterizedType paramType) {
                 var typeArgs = paramType.getActualTypeArguments();
+                log.info("Type arguments count: {}", typeArgs.length);
 
-                if (typeArgs.length > 0 && typeArgs[0] instanceof Class) {
-                    return (Class<?>) typeArgs[0];
+                if (typeArgs.length > 0) {
+                    var firstArg = typeArgs[0];
+                    log.info("First type argument: {} (type: {})", firstArg, firstArg.getClass().getName());
+
+                    // Direct case: ResponseEntity<SignedMxMessage>
+                    if (firstArg instanceof Class<?> clazz) {
+                        log.info("Direct class type: {}", clazz);
+                        return clazz;
+                    }
+
+                    // Nested case: ResponseEntity<Result<SignedMxMessage>>
+                    if (firstArg instanceof ParameterizedType nestedType) {
+                        log.info("Nested ParameterizedType found: {}", nestedType);
+                        var nestedArgs = nestedType.getActualTypeArguments();
+                        log.info("Nested type arguments count: {}", nestedArgs.length);
+                        if (nestedArgs.length > 0 && nestedArgs[0] instanceof Class<?> nestedClass) {
+                            log.info("Extracted nested type: {}", nestedClass);
+                            return nestedClass;
+                        }
+                    }
                 }
             }
         } catch (Exception e) {
-            log.debug("Failed to extract generic type from ResponseEntity", e);
+            log.error("Failed to extract generic type from ResponseEntity", e);
         }
 
         return null;

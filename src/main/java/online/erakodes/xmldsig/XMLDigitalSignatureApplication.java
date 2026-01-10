@@ -36,7 +36,7 @@ public class XMLDigitalSignatureApplication {
 	}
 
 	@GetMapping("/accounts/{id}")
-	public ResponseEntity<?>
+	public ResponseEntity<Result<SignedMxMessage>>
 	lookupAccount(@PathVariable String id) {
 		log.info("Handling account lookup with ID {}", id);
 		var response = mxHandler
