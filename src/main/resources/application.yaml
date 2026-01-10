@@ -4,16 +4,16 @@ gg:
 
 spring:
   application:
-    name: xml-dsign
+    name: xmldsig
     group: online.erakodes
     version: 0.0.1
 
-application:
+xmldsig:
   properties:
     security:
       keys:
-        location: ""
-        pass: "changeit" // This should be encrypted
+        # location: ""
+        pass: "changeit" # This should be encrypted
 
 # Data Source Configurations
   datasource:

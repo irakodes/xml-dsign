@@ -3,6 +3,7 @@ package online.erakodes.xmldsig;
 import lombok.RequiredArgsConstructor;
 import online.erakodes.xmldsig.model.*;
 import online.erakodes.xmldsig.service.IMessageHandler;
+import online.erakodes.xmldsig.web.SignedMxMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -14,7 +15,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.concurrent.CompletableFuture;
 
 @RestController
 @SpringBootApplication
@@ -29,22 +29,24 @@ public class XMLDigitalSignatureApplication {
 	private final IMessageHandler<PaymentDto, TransactionResponse> paymentHandler;
 	private final IMessageHandler<String, TransactionStatusResponse> txStatusHandler;
 
+	private final IMessageHandler<Object, SignedMxMessage> mxHandler; //<-- This is the one that actually signs the message
+
 	public static void main(String[] args) {
 		SpringApplication.run(XMLDigitalSignatureApplication.class, args);
 	}
 
 	@GetMapping("/accounts/{id}")
-	public ResponseEntity<CompletableFuture<Result<AccountLookupResponse>>>
+	public ResponseEntity<?>
 	lookupAccount(@PathVariable String id) {
 		log.info("Handling account lookup with ID {}", id);
-		var response = accountLookupHandler
-				.handle(new AccountLookupDto(id, "", ""));
+		var response = mxHandler
+				.handle(new AccountLookupDto(id, "", "SOMBKBIC"));
 
 		return ResponseEntity.ok(response);
 	}
 
 	@PostMapping("/accounts")
-	public ResponseEntity<CompletableFuture<Result<AccountOpeningResponse>>>
+	public ResponseEntity<?>
 	createAccount(@RequestBody AccountOpeningDto request) {
 		log.info("Handling account creation for account ID: {}", request.accountId());
 

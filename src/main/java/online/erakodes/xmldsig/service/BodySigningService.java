@@ -25,7 +25,7 @@ public class BodySigningService {
 
     private static final String SIGNATURE_ALGORITHM = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
 
-    @Value("${application.properties.security.keys.pass}")
+    @Value("${xmldsig.properties.security.keys.pass}")
     private String KEY_PASS;
 
     private final static Logger log = LoggerFactory.getLogger(BodySigningService.class);
