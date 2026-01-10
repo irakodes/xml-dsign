@@ -8,6 +8,9 @@ import org.w3c.dom.Element;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Utility class to extract digest information from signed XML documents.
+ */
 public class DigestExtractor {
 
     private static final Logger log = LoggerFactory.getLogger(DigestExtractor.class);
@@ -16,6 +19,14 @@ public class DigestExtractor {
     private static final String DIGEST_METHOD_TAG = "DigestMethod";
 
 
+    /**
+     * Extracts digest information from a signed XML document.
+     * The method parses the XML Signature element and retrieves all Reference elements
+     * along with their digest values and metadata.
+     *
+     * @param signedXml the signed XML document as a string
+     * @return a list of DigestInfo objects containing entity names and digest values
+     */
     public static List<SignedMxMessage.DigestInfo> extractDigests(String signedXml) {
         var digests = new ArrayList<SignedMxMessage.DigestInfo>();
 
@@ -49,6 +60,13 @@ public class DigestExtractor {
         return digests;
     }
 
+    /**
+     * Extracts digest information from a single Reference element.
+     *
+     * @param element the Reference DOM element
+     * @param i the index of this reference (for naming purposes)
+     * @return DigestInfo object or null if extraction fails
+     */
     private static SignedMxMessage.DigestInfo extractDigestFromReference(Element element, int i) {
         try {
             var uri = element.getAttribute("URI");
@@ -94,6 +112,12 @@ public class DigestExtractor {
         }
     }
 
+    /**
+     * Extracts a human-readable algorithm name from the URI.
+     *
+     * @param algorithmUri the algorithm URI
+     * @return simplified algorithm name
+     */
     private static String extractAlgorithName(String algorithmUri) {
         if (algorithmUri.contains("sha256") || algorithmUri.contains("SHA256")) return "SHA-256";
         if (algorithmUri.contains("sha512") || algorithmUri.contains("SHA512")) return "SHA-512";
@@ -102,6 +126,17 @@ public class DigestExtractor {
         return algorithmUri;
     }
 
+    /**
+     * Determines the entity name based on the Reference URI.
+     * Based on the XmlSigner implementation:
+     * - URI starting with "#" and containing UUID -> KeyInfo
+     * - Empty URI -> Document/Envelope
+     * - null URI -> AppHdr or similar
+     *
+     * @param uri the URI attribute from the Reference element
+     * @param i the index for fallback naming
+     * @return a descriptive entity name
+     */
     private static String determineEntityName(String uri, int i) {
         if (uri == null || uri.isEmpty())
             return i == 1 ? "Document" : "Reference_" + i;
