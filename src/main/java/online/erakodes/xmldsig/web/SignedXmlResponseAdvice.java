@@ -65,11 +65,9 @@ public class SignedXmlResponseAdvice implements ResponseBodyAdvice<SignedMxMessa
         if (body == null) return null;
 
         log.info("XML Signing The Response Body {} bytes",
-                 body.getSignedContent().getBytes(StandardCharsets.UTF_8));
+                body.getSignedContent().getBytes(StandardCharsets.UTF_8));
 
-        body = signingService.wrapAndSign(body);
-
-        return null;
+        return signingService.wrapAndSign(body);
     }
 
 

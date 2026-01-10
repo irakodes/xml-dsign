@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CompletableFuture;
 
 @Component
 public class TransactionStatusHandler implements IMessageHandler<String, TransactionStatusResponse> {
@@ -15,7 +14,7 @@ public class TransactionStatusHandler implements IMessageHandler<String, Transac
     private final static Logger log = LoggerFactory.getLogger(TransactionStatusHandler.class);
 
     @Override
-    public CompletableFuture<Result<TransactionStatusResponse>> handle(String txId) {
+    public Result<TransactionStatusResponse> handle(String txId) {
         var message = ISOMessageHandler.formatPACS00200110(txId, txId, txId);
 
         log.info("[PACS.002.001.10] Message: {}", message);

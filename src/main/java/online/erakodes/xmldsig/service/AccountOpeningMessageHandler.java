@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CompletableFuture;
 
 @Component
 public class AccountOpeningMessageHandler implements IMessageHandler<AccountOpeningDto, AccountOpeningResponse> {
@@ -16,7 +15,7 @@ public class AccountOpeningMessageHandler implements IMessageHandler<AccountOpen
     private final static Logger log = LoggerFactory.getLogger(AccountOpeningMessageHandler.class);
 
     @Override
-    public CompletableFuture<Result<AccountOpeningResponse>> handle(AccountOpeningDto request) {
+    public Result<AccountOpeningResponse> handle(AccountOpeningDto request) {
         var contactDetails = request.contactDetails();
         String[] args;
 
@@ -46,6 +45,6 @@ public class AccountOpeningMessageHandler implements IMessageHandler<AccountOpen
         response.setAccountId(request.accountId());
         response.setSuccess(true);
 
-        return CompletableFuture.completedFuture(new Result.Ok<>(response, null));
+        return new Result.Ok<>(response, null);
     }
 }

@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CompletableFuture;
 
 @Component
 public class PaymentMessageHandler implements IMessageHandler<PaymentDto, TransactionResponse> {
@@ -17,7 +16,7 @@ public class PaymentMessageHandler implements IMessageHandler<PaymentDto, Transa
     private final static Logger log = LoggerFactory.getLogger(PaymentMessageHandler.class);
 
     @Override
-    public CompletableFuture<Result<TransactionResponse>> handle(PaymentDto request) {
+    public Result<TransactionResponse> handle(PaymentDto request) {
         var pacs008 = Pacs008Transfer.fromPaymentDto(request);
         var xmlMessage = ISOMessageHandler.formatPACS00800108(pacs008);
 
