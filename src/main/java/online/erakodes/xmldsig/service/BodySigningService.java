@@ -114,7 +114,7 @@ public class BodySigningService {
     }
 
     private String computeCertificateThumbprint() throws CertificateEncodingException, NoSuchAlgorithmException {
-        var certificate = KeyHandler.getCertificate(KEY_PASS);
+        var certificate = KeyHandler.getCertificate();
         var encodedCert = certificate.getEncoded();
 
         var digest = MessageDigest.getInstance("SHA-256");

@@ -69,7 +69,7 @@ public class KeyHandler {
         }
     }
 
-    public static X509Certificate getCertificate(String keyPass) {
+    public static X509Certificate getCertificate() {
         try {
             var ks = getKeyStore();
 

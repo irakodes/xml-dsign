@@ -41,7 +41,7 @@ public class XmlSigner {
             throw new Exception("document to be signed is null");
         }
         final var privateKey = getPrivateKey(keyPass);
-        final var certificate = getCertificate(keyPass);
+        final var certificate = getCertificate();
         //String output;
         final XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
         PublicKey publicKey = certificate.getPublicKey();
