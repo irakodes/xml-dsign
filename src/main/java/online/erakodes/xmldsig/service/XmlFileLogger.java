@@ -15,6 +15,10 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 
+/**
+ * Service for logging signed XML messages to the filesystem.
+ * Files are organized by date in the format: logs/files/dd-MMM-yy/messageId.xml
+ */
 @Service
 public class XmlFileLogger {
 
@@ -24,17 +28,30 @@ public class XmlFileLogger {
     @Value("${xmldsig.log.base-path}")
     private String basePath;
 
-
-    public void logSignedXml(String messageId, String signedXml) {
+    /**
+     * Logs a signed XML message to a file organized by date.
+     *
+     * @param messageId the unique message identifier (used as filename)
+     * @param signedXml the complete signed XML content to write
+     * @throws IOException if file writing fails
+     */
+    public void logSignedXml(String messageId, String signedXml) throws IOException {
         try {
             var filePath = buildFilePath(messageId);
             writeXmlToFile(filePath, signedXml);
             log.info("[{}] XML successfully logged to {}.", messageId, filePath);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            log.error("Failed to log signed XML for messageId: {}", messageId, e);
         }
     }
 
+    /**
+     * Writes the XML content to the specified file.
+     *
+     * @param filePath the target file path
+     * @param signedXml the XML content to write
+     * @throws IOException if writing fails
+     */
     private void writeXmlToFile(Path filePath, String signedXml) throws IOException {
         Files.writeString(
                 filePath,
@@ -45,6 +62,14 @@ public class XmlFileLogger {
         );
     }
 
+    /**
+     * Builds the file path based on current date and message ID.
+     * Format: logs/files/dd-MMM-yy/messageId.xml
+     *
+     * @param messageId the message identifier
+     * @return the complete file path
+     * @throws IOException if directory creation fails
+     */
     private Path buildFilePath(String messageId) throws IOException {
         var dateFolder = LocalDate.now().format(DATE_FORMATTER);
         var directoryPath = Paths.get(basePath, dateFolder);
@@ -60,6 +85,13 @@ public class XmlFileLogger {
         return directoryPath.resolve(sanitizedMesageId + ".xml");
     }
 
+    /**
+     * Sanitizes a message ID to create a valid filename.
+     * Removes or replaces characters that are invalid in filenames.
+     *
+     * @param messageId the original message ID
+     * @return sanitized filename-safe string
+     */
     private String sanitizeFileName(String messageId) {
         if (messageId == null || messageId.isBlank()) return "unknown_" + System.currentTimeMillis();
         return messageId.replaceAll("[\\\\/:*?\"<>|]", "_");
