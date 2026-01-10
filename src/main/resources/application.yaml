@@ -14,6 +14,8 @@ xmldsig:
       keys:
         # location: ""
         pass: "changeit" # This should be encrypted
+  log:
+    base-path: logs/files
 
 # Data Source Configurations
   datasource:
