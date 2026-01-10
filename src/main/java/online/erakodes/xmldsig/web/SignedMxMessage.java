@@ -10,6 +10,7 @@ import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Represents a signed ISO 20022 MX message for API transmission.
@@ -24,14 +25,14 @@ public class SignedMxMessage {
      * Unique message identifier (e.g., ISO 20022 MsgId)
      */
     @NotBlank(message = "Message ID is required")
-    @JsonProperty("message_id")
+    @JsonProperty("messageId")
     String messageId;
 
     /**
      * Message creation timestamp in ISO 8601 format
      */
     @NotNull(message = "Creation time is required")
-    @JsonProperty("creation_time")
+    @JsonProperty("creationTime")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     Instant creationTime;
 
@@ -40,7 +41,7 @@ public class SignedMxMessage {
      */
     @NotBlank(message = "Sender is required")
     @Pattern(regexp = "^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$", message = "Invalid BIC format")
-    @JsonProperty("sender_bic")
+    @JsonProperty("senderBIC")
     String sender;
 
     /**
@@ -48,28 +49,28 @@ public class SignedMxMessage {
      */
     @NotBlank(message = "Receiver is required")
     @Pattern(regexp = "^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$", message = "Invalid BIC format")
-    @JsonProperty("receiver_bic")
+    @JsonProperty("receiverBIC")
     String receiver;
 
     /**
      * ISO 20022 message type (e.g., pacs.008.001.08)
      */
     @NotBlank(message = "Message type is required")
-    @JsonProperty("message_type")
+    @JsonProperty("messageType")
     String messageType;
 
     /**
      * The complete signed XML message content (base64 encoded for safe JSON transport)
      */
     @NotBlank(message = "Message content is required")
-    @JsonProperty("signed_content")
+    @JsonProperty("signedContent")
     String signedContent;
 
     /**
      * Signature metadata
      */
     @NotNull(message = "Signature info is required")
-    @JsonProperty("signature_info")
+    @JsonProperty("signatureInfo")
     SignatureInfo signatureInfo;
 
     /**
@@ -88,15 +89,46 @@ public class SignedMxMessage {
         @JsonProperty("algorithm")
         String algorithm;
 
-        @JsonProperty("signed_at")
+        @JsonProperty("signedAt")
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
         Instant signedAt;
 
-        @JsonProperty("signer_certificate_thumbprint")
+        @JsonProperty("signerCertificateThumbprint")
         String signerCertificateThumbprint;
 
-        @JsonProperty("signature_valid")
+        @JsonProperty("signatureValid")
         Boolean signatureValid;
+
+        /**
+         * Represents a collection of digests associated with the signature.
+         * Each digest provides specific details about a particular algorithm or data verification.
+         */
+        @JsonProperty("digests")
+        List<DigestInfo> digests;
+    }
+
+    @Value
+    @Builder
+    @Jacksonized
+    public static class DigestInfo {
+
+        /**
+         * Name/identifier of the signed entity (e.g., "KeyInfo", "Document", "AppHdr")
+         */
+        @JsonProperty("entityName")
+        String entityName;
+
+        /**
+         * The digest value in hexadecimal format.
+         */
+        @JsonProperty("digestValue")
+        String digestValue;
+
+        @JsonProperty("algorithm")
+        String algorithm;
+
+        @JsonProperty("referenceUri")
+        String referenceUri;
     }
 
     /**
