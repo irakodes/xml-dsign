@@ -1,19 +1,25 @@
 package online.erakodes.xmldsig.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import online.erakodes.xmldsig.model.pacs.StatusReason;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 
-public class TransactionStatusResponse {
-    private String messageId;
-    private OffsetDateTime creationDateTime;
+@Builder
+public record TransactionStatusResponse(
+        String messageId,
+        OffsetDateTime creationDateTime,
 
-    private String originalInstructionId;
-    private String originalEndToEndId;
-    private String originalTransactionId;
+        String originalInstructionId,
+        String originalEndToEndId,
+        String originalTransactionId,
 
-    private TransactionStatus status;
+        TransactionStatus status,
 
-    private List<StatusReason> reasons;
+        List<StatusReason> reasons
+) {
 }

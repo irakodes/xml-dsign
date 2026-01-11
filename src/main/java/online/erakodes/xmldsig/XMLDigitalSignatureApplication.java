@@ -46,7 +46,7 @@ public class XMLDigitalSignatureApplication {
 	}
 
 	@PostMapping("/accounts")
-	public ResponseEntity<?>
+	public ResponseEntity<Result<AccountOpeningResponse>>
 	createAccount(@RequestBody AccountOpeningDto request) {
 		log.info("Handling account creation for account ID: {}", request.accountId());
 
@@ -59,7 +59,7 @@ public class XMLDigitalSignatureApplication {
 	}
 
 	@PostMapping("/transfers")
-	public ResponseEntity<?> transferFunds(@RequestBody PaymentDto request) {
+	public ResponseEntity<Result<TransactionResponse>> transferFunds(@RequestBody PaymentDto request) {
 		log.info("Handling transfer funds request for account ID: {}", request.initiatorId());
 		var response = paymentHandler.handle(request);
 
@@ -70,7 +70,7 @@ public class XMLDigitalSignatureApplication {
 	 * Only for the purpose of testing the status endpoint
 	 ***/
 	@GetMapping("/transfers/{transactionId}/status")
-	public ResponseEntity<?> transferFunds(@PathVariable String transactionId) {
+	public ResponseEntity<Result<TransactionStatusResponse>> getTransactionStatus(@PathVariable String transactionId) {
 		log.info("Handling PACS.002.001.10 Transaction Status Call for {}", transactionId);
 		var response = txStatusHandler.handle(transactionId);
 
