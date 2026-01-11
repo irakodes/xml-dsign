@@ -1,6 +1,7 @@
 package online.erakodes.xmldsig.web;
 
 import lombok.RequiredArgsConstructor;
+import online.erakodes.xmldsig.model.Response;
 import online.erakodes.xmldsig.model.Result;
 import online.erakodes.xmldsig.service.BodySigningService;
 import org.jspecify.annotations.NonNull;
@@ -40,18 +41,34 @@ public class SignedXmlResponseAdvice implements ResponseBodyAdvice<Object> {
             return true;
         }
 
-        // Return type is ResponseEntity<SignedMxMessage>
+        // Return type is Result<T>
+        if (Result.class.isAssignableFrom(bodyType)) {
+            log.debug("SignedXmlResponseAdvice supports Result return type [{}]",
+                    bodyType.getSimpleName());
+            return true;
+        }
+
+        // Return type is ResponseEntity<...>
         if (ResponseEntity.class.isAssignableFrom(bodyType)) {
             var entityType = extractGenericTypeFromResponseEntity(returnType);
 
-            if (entityType != null && SignedMxMessage.class.isAssignableFrom(entityType)) {
-                log.debug("SignedXmlResponseAdvice supports ResponseEntity<SignedMxMessage> return type [{}]",
-                        entityType.getSimpleName());
-                return true;
+            if (entityType != null) {
+                // ResponseEntity<SignedMxMessage>
+                if (SignedMxMessage.class.isAssignableFrom(entityType)) {
+                    log.debug("SignedXmlResponseAdvice supports ResponseEntity<SignedMxMessage> return type [{}]",
+                            entityType.getSimpleName());
+                    return true;
+                }
+
+                // ResponseEntity<Result<T>>
+                if (Result.class.isAssignableFrom(entityType)) {
+                    log.debug("SignedXmlResponseAdvice supports ResponseEntity<Result<T>> return type [{}]",
+                            entityType.getSimpleName());
+                    return true;
+                }
             }
         }
 
-        // TODO: Handle error case scenarios
         log.debug("SignedXmlResponseAdvice does NOT support return type: {}", bodyType.getSimpleName());
         return false;
     }
@@ -76,21 +93,55 @@ public class SignedXmlResponseAdvice implements ResponseBodyAdvice<Object> {
             return signingService.wrapAndSign(signedMessage);
         }
 
-        // Handle Result<SignedMxMessage>
+        // Handle Result<T> - convert to Response<T> using ResponseMapper
         if (body instanceof Result<?> result) {
-            if (result instanceof Result.Ok<?> ok && ok.data() instanceof SignedMxMessage signed) {
-                log.info("XML Signing The Response Body from Result<SignedMxMessage> {} bytes",
+            return handleResultType(result);
+        }
+
+        log.debug("Response body does not contain a SignedMxMessage or Result (type: {}), passing through",
+                body.getClass().getName());
+        return body;
+    }
+
+    /**
+     * Handles Result<T> types by converting them to Response<T> using ResponseMapper.
+     * For Result.Ok containing SignedMxMessage, the content is signed before mapping.
+     * For Result.Fail, the error is mapped to Response directly.
+     *
+     * @param result The Result to process
+     * @return Response<T> mapped from the Result
+     */
+    @SuppressWarnings("unchecked")
+    private <T> Response<T> handleResultType(Result<?> result) {
+        // Handle success case: Result.Ok
+        if (result instanceof Result.Ok<?> ok) {
+            // If data is SignedMxMessage, sign it first
+            if (ok.data() instanceof SignedMxMessage signed) {
+                log.info("XML Signing The Response Body from Result.Ok<SignedMxMessage> {} bytes",
                         signed.getSignedContent().getBytes(StandardCharsets.UTF_8).length);
 
                 var signedMessage = signingService.wrapAndSign(signed);
+                var signedResult = new Result.Ok<>(signedMessage, ok.details());
 
-                return new Result.Ok<>(signedMessage, ok.details());
+                log.debug("Converting signed Result.Ok to Response");
+                return (Response<T>) ResponseMapper.toHttpResponse(signedResult);
             }
+
+            // For non-SignedMxMessage data, convert directly
+            log.debug("Converting Result.Ok to Response");
+            return ResponseMapper.toHttpResponse((Result<T>) result);
         }
 
-        log.debug("Response body does not contain a SignedMxMessage (type: {}), skipping signing",
-                body.getClass().getName());
-        return body;
+        // Handle failure case: Result.Fail
+        if (result instanceof Result.Fail<?> fail) {
+            log.debug("Converting Result.Fail to Response with error code: {}",
+                    fail.error() != null ? fail.error().getErrorCode() : "unknown");
+            return ResponseMapper.toHttpResponse((Result<T>) result);
+        }
+
+        // Fallback - should not reach here due to sealed interface
+        log.warn("Unknown Result type encountered: {}", result.getClass().getName());
+        return ResponseMapper.toHttpResponse((Result<T>) result);
     }
 
 
