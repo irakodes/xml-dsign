@@ -1,4 +1,4 @@
-package online.erakodes.xml_dsign;
+package online.erakodes.xmldsig;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;

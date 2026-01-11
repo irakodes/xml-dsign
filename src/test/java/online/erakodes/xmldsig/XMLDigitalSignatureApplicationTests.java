@@ -1,4 +1,4 @@
-package online.erakodes.xml_dsign;
+package online.erakodes.xmldsig;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Import;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
-class XmlDsignApplicationTests {
+class XMLDigitalSignatureApplicationTests {
 
 	@Test
 	void contextLoads() {

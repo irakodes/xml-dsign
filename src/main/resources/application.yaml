@@ -1,0 +1,47 @@
+gg:
+  jte:
+    development-mode: true
+
+spring:
+  application:
+    name: xmldsig
+    group: online.erakodes
+    version: 0.0.1
+
+xmldsig:
+  properties:
+    security:
+      keys:
+        # location: ""
+        pass: "changeit" # This should be encrypted
+  log:
+    base-path: logs/files
+
+# Data Source Configurations
+  datasource:
+    url: jdbc:sqlserver://127.0.0.1:1433;databaseName=master;encrypt=false;trustServerCertificate=false;loginTimeout=30;
+    username: sa
+    password: runMSSQLN0w
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    jpa:
+      hibernate:
+        ddl-auto: update
+        naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      show-sql: true
+      properties:
+        hibernate:
+        dialect: org.hibernate.dialect.SQLServer2012Dialect
+        format_sql: true
+        default_schema: dbo
+        jdbc:
+          lob:
+          non_contextual_creation: true
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:sql/schema.sql
+  docker:
+    compose:
+      enabled: true
+      lifecycle-management: start_only

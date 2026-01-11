@@ -1,0 +1,13 @@
+services:
+    mssql-server:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+            -   "1433:1433"
+        environment:
+            ACCEPT_EULA: "Y"
+            SA_PASSWORD: "runMSSQLN0w"
+        volumes:
+            -   /Volumes/Expansion/var/opt/mssql:/var/opt/mssql
+volumes:
+    sqlserver_data:
+        driver: local
