@@ -4,6 +4,7 @@ import com.prowidesoftware.swift.model.mx.AbstractMX;
 import lombok.RequiredArgsConstructor;
 import online.erakodes.xmldsig.exception.SignatureBuilderException;
 import online.erakodes.xmldsig.exception.SigningException;
+import online.erakodes.xmldsig.helper.DigestExtractor;
 import online.erakodes.xmldsig.helper.XmlSigner;
 import online.erakodes.xmldsig.util.KeyHandler;
 import online.erakodes.xmldsig.web.SignedMxMessage;
@@ -17,6 +18,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 
 @Component
@@ -29,6 +31,8 @@ public class BodySigningService {
     private String KEY_PASS;
 
     private final static Logger log = LoggerFactory.getLogger(BodySigningService.class);
+
+    private final XmlFileLogger fileLogger;
 
     /**
      * Signs an MX message and returns a complete SignedMxMessage with signature metadata
@@ -54,10 +58,15 @@ public class BodySigningService {
             var signedMxMessage = XmlSigner.sign(unsignedMxMessage, KEY_PASS);
             log.info("MX Message signed successfully: {}", parsedMx.getMxId().id());
 
-            var signatureInfo = buildSignatureInfo();
+            var digests = DigestExtractor.extractDigests(signedMxMessage);
+            log.debug("Extracted {} digests from signed XML", digests.size());
 
-            return SignedMxMessage.builder()
-                    .messageId(extractMessageId(parsedMx))
+            var signatureInfo = buildSignatureInfo(digests);
+
+            var messageId = extractMessageId(parsedMx);
+
+            var finalMessage = SignedMxMessage.builder()
+                    .messageId(messageId)
                     .creationTime(Instant.now())
                     .sender(extractSender(parsedMx))
                     .receiver(extractReceiver(parsedMx))
@@ -66,6 +75,10 @@ public class BodySigningService {
                     .signatureInfo(signatureInfo)
                     .status(SignedMxMessage.MessageStatus.SIGNED)
                     .build();
+
+            fileLogger.logSignedXml(messageId, signedMxMessage); //TODO: Move to a separate service (logger
+
+            return finalMessage;
         } catch (Exception e) {
             log.error("An error occurred while signing the MX Message: {}", e.getMessage());
             throw new SigningException(e);
@@ -74,30 +87,28 @@ public class BodySigningService {
 
     /**
      * Builds and returns a {@link SignedMxMessage.SignatureInfo} object containing details about the
-     * signature algorithm, signing time, certificate thumbprint, and validity status of the signature.
-     * <p>
-     * The certificate thumbprint is computed using SHA-256 hash algorithm.
+     * signature algorithm, signing time, certificate thumbprint, digest information, and validity status.
      *
-     * @return a {@link SignedMxMessage.SignatureInfo} object with details about the digital signature.
+     * @param digests the list of digest information extracted from the signed XML
+     * @return a {@link SignedMxMessage.SignatureInfo} object with complete signature metadata
      * @throws RuntimeException if a {@link NoSuchAlgorithmException} or {@link CertificateEncodingException}
      *                          occurs during certificate thumbprint computation.
      */
-    private SignedMxMessage.SignatureInfo buildSignatureInfo() {
+    private SignedMxMessage.SignatureInfo buildSignatureInfo(List<SignedMxMessage.DigestInfo> digests) {
         try {
             var instant = Instant.now();
-            var thumprint = computeCertificateThumbprint();
+            var thumbprint = computeCertificateThumbprint();
 
             return SignedMxMessage.SignatureInfo.builder()
                     .algorithm(SIGNATURE_ALGORITHM)
                     .signedAt(instant)
-                    .signerCertificateThumbprint(thumprint)
+                    .signerCertificateThumbprint(thumbprint)
                     .signatureValid(true)
+                    .digests(digests)
                     .build();
         } catch (NoSuchAlgorithmException | CertificateEncodingException e) {
             log.error("Failed to compute certificate thumbprint", e);
             throw new SignatureBuilderException(e);
-        } finally {
-            // TODO: Handle error case scenarios
         }
     }
 
