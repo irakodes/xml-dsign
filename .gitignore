@@ -40,3 +40,5 @@ out/
 /jte-classes/
 
 .DS_Store
+
+/logs/
