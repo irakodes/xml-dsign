@@ -35,20 +35,23 @@ public class XmlFileLogger {
      * @param signedXml the complete signed XML content to write
      * @throws IOException if file writing fails
      */
-    public void logSignedXml(String messageId, String signedXml) throws IOException {
+    public Path logSignedXml(String messageId, String signedXml) throws IOException {
         try {
             var filePath = buildFilePath(messageId);
             writeXmlToFile(filePath, signedXml);
             log.info("[{}] XML successfully logged to {}.", messageId, filePath);
+
+            return filePath;
         } catch (IOException e) {
             log.error("Failed to log signed XML for messageId: {}", messageId, e);
+            throw e;
         }
     }
 
     /**
      * Writes the XML content to the specified file.
      *
-     * @param filePath the target file path
+     * @param filePath  the target file path
      * @param signedXml the XML content to write
      * @throws IOException if writing fails
      */

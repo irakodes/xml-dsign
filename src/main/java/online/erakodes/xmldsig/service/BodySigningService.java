@@ -1,6 +1,7 @@
 package online.erakodes.xmldsig.service;
 
 import com.prowidesoftware.swift.model.mx.AbstractMX;
+import com.prowidesoftware.swift.model.mx.BusinessAppHdrV04;
 import lombok.RequiredArgsConstructor;
 import online.erakodes.xmldsig.exception.SignatureBuilderException;
 import online.erakodes.xmldsig.exception.SigningException;
@@ -18,6 +19,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -65,20 +67,18 @@ public class BodySigningService {
 
             var messageId = extractMessageId(parsedMx);
 
-            var finalMessage = SignedMxMessage.builder()
+            var contentPath = fileLogger.logSignedXml(messageId, signedMxMessage);
+
+            return SignedMxMessage.builder()
                     .messageId(messageId)
                     .creationTime(Instant.now())
                     .sender(extractSender(parsedMx))
                     .receiver(extractReceiver(parsedMx))
                     .messageType(extractMessageType(parsedMx))
-                    .signedContent(signedMxMessage)
+                    .signedContent(contentPath.toString())
                     .signatureInfo(signatureInfo)
                     .status(SignedMxMessage.MessageStatus.SIGNED)
                     .build();
-
-            fileLogger.logSignedXml(messageId, signedMxMessage); //TODO: Move to a separate service (logger
-
-            return finalMessage;
         } catch (Exception e) {
             log.error("An error occurred while signing the MX Message: {}", e.getMessage());
             throw new SigningException(e);
@@ -140,7 +140,74 @@ public class BodySigningService {
     }
 
     private String extractMessageId(AbstractMX mx) {
-        return mx.getMxId().id();
+        // First try to get the BizMsgIdr from AppHdr (Business Message Identifier)
+        try {
+            var bizMsgId = mx.getAppHdr();
+            return ((BusinessAppHdrV04) bizMsgId).getBizMsgIdr();
+        } catch (Exception e) {
+            log.debug("Could not extract BizMsgIdr from AppHdr", e);
+        }
+
+        // Fallback: try to extract MsgId from the message body (Group Header)
+        try {
+            // This works for most payment messages (pacs, pain, camt)
+            var message = mx.message();
+            if (message != null) {
+                // Use reflection to try common message ID fields
+                var msgId = extractMsgIdFromMessage(mx);
+                if (msgId != null && !msgId.isBlank()) {
+                    return msgId;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract MsgId from message body", e);
+        }
+
+        // Final fallback: generate a unique ID based on timestamp and type
+        String fallbackId = String.format("%s_%d",
+                mx.getMxId().id().replace(".", "_"),
+                System.currentTimeMillis());
+        log.warn("Could not extract message ID, using fallback: {}", fallbackId);
+        return fallbackId;
+    }
+
+    /**
+     * Attempts to extract the message ID from the message body using reflection.
+     * Tries common field paths used in ISO20022 messages.
+     */
+    private String extractMsgIdFromMessage(Object message) {
+        try {
+            // Try GrpHdr.MsgId (common in pacs, pain, camt messages)
+            var grpHdrMethod = message.getClass().getMethod("getGrpHdr");
+            var grpHdr = grpHdrMethod.invoke(message);
+
+            if (grpHdr != null) {
+                var msgIdMethod = grpHdr.getClass().getMethod("getMsgId");
+                var msgId = msgIdMethod.invoke(grpHdr);
+                if (msgId != null) {
+                    return msgId.toString();
+                }
+            }
+        } catch (Exception e) {
+            // Try alternative paths for other message types
+            try {
+                // Some messages use Hdr.MsgId instead of GrpHdr.MsgId
+                var hdrMethod = message.getClass().getMethod("getAppHdr");
+                var hdr = hdrMethod.invoke(message);
+
+                if (hdr != null) {
+                    // var msgIdMethod = hdr.getClass().getMethod("getMsgId");
+                    var msgId = ((BusinessAppHdrV04) hdr).getBizMsgIdr();// msgIdMethod.invoke(hdr);
+                    if (msgId != null) {
+                        return msgId;
+                    }
+                }
+            } catch (Exception ex) {
+                log.trace("Could not extract MsgId using alternative paths", ex);
+            }
+        }
+
+        return null;
     }
 
     private String extractSender(AbstractMX mx) {
@@ -152,6 +219,6 @@ public class BodySigningService {
     }
 
     private String extractMessageType(AbstractMX mx) {
-        return mx.getMessageStandardType().toString();
+        return mx.getMxId().id();
     }
 }

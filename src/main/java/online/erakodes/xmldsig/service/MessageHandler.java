@@ -19,12 +19,26 @@ public class MessageHandler implements IMessageHandler<Object, SignedMxMessage> 
 
     @Override
     public Result<SignedMxMessage> handle(Object request) {
-        if (request instanceof AccountLookupDto lookupDto) {
-            var mx = handleCAMT00300107(lookupDto);
-            if (mx != null)
+        try {
+            if (request instanceof AccountLookupDto lookupDto) {
+                var mx = handleCAMT00300107(lookupDto);
                 return new Result.Ok<>(mx, null);
+            }
+
+            log.warn("Unsupported request type: {}", request.getClass().getName());
+            return new Result.Fail<>(Error.builder()
+                    .errorCode("UNSUPPORTED_REQUEST_TYPE")
+                    .errorType("Validation Error")
+                    .detail("Unsupported request type: " + request.getClass().getSimpleName())
+                    .build());
+        } catch (Exception e) {
+            log.error("Failed to handle message request", e);
+            return new Result.Fail<>(Error.builder()
+                    .errorCode("MESSAGE_HANDLING_ERROR")
+                    .errorType("System Error")
+                    .detail("Failed to handle message: " + e.getMessage())
+                    .build());
         }
-        return null;
     }
 
     private SignedMxMessage handleCAMT00300107(AccountLookupDto request) {
