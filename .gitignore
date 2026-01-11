@@ -40,5 +40,5 @@ out/
 /jte-classes/
 
 .DS_Store
-
+*.sh
 /logs/
