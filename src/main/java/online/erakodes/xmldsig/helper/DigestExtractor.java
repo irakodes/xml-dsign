@@ -64,7 +64,7 @@ public class DigestExtractor {
      * Extracts digest information from a single Reference element.
      *
      * @param element the Reference DOM element
-     * @param i the index of this reference (for naming purposes)
+     * @param i       the index of this reference (for naming purposes)
      * @return DigestInfo object or null if extraction fails
      */
     private static SignedMxMessage.DigestInfo extractDigestFromReference(Element element, int i) {
@@ -134,12 +134,16 @@ public class DigestExtractor {
      * - null URI -> AppHdr or similar
      *
      * @param uri the URI attribute from the Reference element
-     * @param i the index for fallback naming
+     * @param i   the index for fallback naming
      * @return a descriptive entity name
      */
     private static String determineEntityName(String uri, int i) {
-        if (uri == null || uri.isEmpty())
-            return i == 1 ? "Document" : "Reference_" + i;
+        log.info("URI: {} | Index: {}", uri, i);
+        if (uri == null || uri.isEmpty()) {
+            if (i == 1) return "Document";
+            else if (i == 2) return "AppHdr";
+            else return "Reference_" + i;
+        }
 
         if (uri.startsWith("#")) {
             var id = uri.substring(1);
@@ -148,9 +152,7 @@ public class DigestExtractor {
 
             return "Reference_" + id;
         }
-
-        if (i == 2) return "AppHdr";
-
+        // if (uri.startsWith("cid:")) return "Attachment_" + uri.substring(4);
         return "Reference_" + i + "_URI";
     }
 }

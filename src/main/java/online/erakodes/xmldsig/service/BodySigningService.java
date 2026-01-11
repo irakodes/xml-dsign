@@ -1,6 +1,7 @@
 package online.erakodes.xmldsig.service;
 
 import com.prowidesoftware.swift.model.mx.AbstractMX;
+import com.prowidesoftware.swift.model.mx.BusinessAppHdrV04;
 import lombok.RequiredArgsConstructor;
 import online.erakodes.xmldsig.exception.SignatureBuilderException;
 import online.erakodes.xmldsig.exception.SigningException;
@@ -18,6 +19,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -65,20 +67,18 @@ public class BodySigningService {
 
             var messageId = extractMessageId(parsedMx);
 
-            var finalMessage = SignedMxMessage.builder()
+            var contentPath = fileLogger.logSignedXml(messageId, signedMxMessage);
+
+            return SignedMxMessage.builder()
                     .messageId(messageId)
                     .creationTime(Instant.now())
                     .sender(extractSender(parsedMx))
                     .receiver(extractReceiver(parsedMx))
                     .messageType(extractMessageType(parsedMx))
-                    .signedContent(signedMxMessage)
+                    .signedContent(contentPath.toString())
                     .signatureInfo(signatureInfo)
                     .status(SignedMxMessage.MessageStatus.SIGNED)
                     .build();
-
-            fileLogger.logSignedXml(messageId, signedMxMessage); //TODO: Move to a separate service (logger
-
-            return finalMessage;
         } catch (Exception e) {
             log.error("An error occurred while signing the MX Message: {}", e.getMessage());
             throw new SigningException(e);
@@ -142,10 +142,8 @@ public class BodySigningService {
     private String extractMessageId(AbstractMX mx) {
         // First try to get the BizMsgIdr from AppHdr (Business Message Identifier)
         try {
-            String bizMsgId = mx.getAppHdr().messageName();
-            if (bizMsgId != null && !bizMsgId.isBlank()) {
-                return bizMsgId;
-            }
+            var bizMsgId = mx.getAppHdr();
+            return ((BusinessAppHdrV04) bizMsgId).getBizMsgIdr();
         } catch (Exception e) {
             log.debug("Could not extract BizMsgIdr from AppHdr", e);
         }
@@ -156,7 +154,7 @@ public class BodySigningService {
             var message = mx.message();
             if (message != null) {
                 // Use reflection to try common message ID fields
-                var msgId = extractMsgIdFromMessage(message);
+                var msgId = extractMsgIdFromMessage(mx);
                 if (msgId != null && !msgId.isBlank()) {
                     return msgId;
                 }
@@ -194,14 +192,14 @@ public class BodySigningService {
             // Try alternative paths for other message types
             try {
                 // Some messages use Hdr.MsgId instead of GrpHdr.MsgId
-                var hdrMethod = message.getClass().getMethod("getHdr");
+                var hdrMethod = message.getClass().getMethod("getAppHdr");
                 var hdr = hdrMethod.invoke(message);
 
                 if (hdr != null) {
-                    var msgIdMethod = hdr.getClass().getMethod("getMsgId");
-                    var msgId = msgIdMethod.invoke(hdr);
+                    // var msgIdMethod = hdr.getClass().getMethod("getMsgId");
+                    var msgId = ((BusinessAppHdrV04) hdr).getBizMsgIdr();// msgIdMethod.invoke(hdr);
                     if (msgId != null) {
-                        return msgId.toString();
+                        return msgId;
                     }
                 }
             } catch (Exception ex) {
@@ -221,6 +219,6 @@ public class BodySigningService {
     }
 
     private String extractMessageType(AbstractMX mx) {
-        return mx.getMessageStandardType().toString();
+        return mx.getMxId().id();
     }
 }
