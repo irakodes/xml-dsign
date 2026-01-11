@@ -140,7 +140,76 @@ public class BodySigningService {
     }
 
     private String extractMessageId(AbstractMX mx) {
-        return mx.getMxId().id();
+        // First try to get the BizMsgIdr from AppHdr (Business Message Identifier)
+        try {
+            String bizMsgId = mx.getAppHdr().messageName();
+            if (bizMsgId != null && !bizMsgId.isBlank()) {
+                return bizMsgId;
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract BizMsgIdr from AppHdr", e);
+        }
+
+        // Fallback: try to extract MsgId from the message body (Group Header)
+        try {
+            // This works for most payment messages (pacs, pain, camt)
+            var message = mx.message();
+            if (message != null) {
+                // Use reflection to try common message ID fields
+                var msgId = extractMsgIdFromMessage(message);
+                if (msgId != null && !msgId.isBlank()) {
+                    return msgId;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not extract MsgId from message body", e);
+        }
+
+        // Final fallback: generate a unique ID based on timestamp and type
+        String fallbackId = String.format("%s_%d",
+                mx.getMxId().id().replace(".", "_"),
+                System.currentTimeMillis());
+        log.warn("Could not extract message ID, using fallback: {}", fallbackId);
+        return fallbackId;
+    }
+
+    /**
+     * Attempts to extract the message ID from the message body using reflection.
+     * Tries common field paths used in ISO20022 messages.
+     */
+    private String extractMsgIdFromMessage(Object message) {
+        try {
+            // Try GrpHdr.MsgId (common in pacs, pain, camt messages)
+            var grpHdrMethod = message.getClass().getMethod("getGrpHdr");
+            var grpHdr = grpHdrMethod.invoke(message);
+
+            if (grpHdr != null) {
+                var msgIdMethod = grpHdr.getClass().getMethod("getMsgId");
+                var msgId = msgIdMethod.invoke(grpHdr);
+                if (msgId != null) {
+                    return msgId.toString();
+                }
+            }
+        } catch (Exception e) {
+            // Try alternative paths for other message types
+            try {
+                // Some messages use Hdr.MsgId instead of GrpHdr.MsgId
+                var hdrMethod = message.getClass().getMethod("getHdr");
+                var hdr = hdrMethod.invoke(message);
+
+                if (hdr != null) {
+                    var msgIdMethod = hdr.getClass().getMethod("getMsgId");
+                    var msgId = msgIdMethod.invoke(hdr);
+                    if (msgId != null) {
+                        return msgId.toString();
+                    }
+                }
+            } catch (Exception ex) {
+                log.trace("Could not extract MsgId using alternative paths", ex);
+            }
+        }
+
+        return null;
     }
 
     private String extractSender(AbstractMX mx) {
